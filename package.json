@@ -7,14 +7,16 @@
   },
   "private": true,
   "scripts": {
-    "wp-env": "wp-env"
+    "wp-env": "wp-env",
+    "setup:tools": "npm run wp-env run composer install",
+    "test": "npm run wp-env run phpunit 'phpunit -c /var/www/html/wp-content/plugins/plugin-check/phpunit.xml.dist'"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/WordPress/plugin-check.git"
   },
   "author": "",
-  "license": "GPL-2.0",
+  "license": "GPL-2.0-or-later",
   "bugs": {
     "url": "https://github.com/WordPress/plugin-check/issues"
   },
