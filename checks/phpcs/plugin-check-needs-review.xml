@@ -44,6 +44,8 @@
 				<element key="hex2bin" value="null"/>
 				<element key="base64_decode" value="null"/>
 				<element key="base64_encode" value="null"/>
+				<element key="shell_exec" value="null"/>
+				<element key="exec" value="null"/>
 			</property>
 		</properties>
 	</rule>
