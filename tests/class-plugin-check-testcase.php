@@ -2,13 +2,16 @@
 use function WordPressdotorg\Plugin_Check\{ run_all_checks };
 
 class PluginCheck_TestCase extends WP_UnitTestCase {
-	public function run_against_string( $string ) {
-		return $this->run_against_virtual_files( [
-			'plugin.php' => $string
-		] );
+	public function run_against_string( $string, $args = [] ) {
+		return $this->run_against_virtual_files(
+			[
+				'plugin.php' => $string
+			],
+			$args
+		);
 	}
 
-	public function run_against_virtual_files( $files ) {
+	public function run_against_virtual_files( $files, $args = [] ) {
 		$tempname = wp_tempnam( 'plugin-check' );
 		unlink( $tempname );
 		mkdir( $tempname );
@@ -23,7 +26,9 @@ class PluginCheck_TestCase extends WP_UnitTestCase {
 			file_put_contents( $full_filename, $string );
 		}
 
-		$results = run_all_checks( $tempname );
+		$args[ 'path' ] = $tempname;
+
+		$results = run_all_checks( $args );
 
 		// Cleanup
 		foreach ( $files as $filename => $string ) {
