@@ -12,7 +12,7 @@ class Test_Functions extends PluginCheck_TestCase {
 	/*
 	 * It's expected that this will fail until #27 is merged.
 	 */
-	public function _test_base64() {
+	public function test_base64() {
 		$usage = 'echo base64_decode( base64_encode( "WordPress" ) );';
 
 		$results = $this->run_against_string( $usage );
