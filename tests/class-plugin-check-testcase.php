@@ -40,35 +40,52 @@ class PluginCheck_TestCase extends WP_UnitTestCase {
 	}
 
 	public function assertHasErrorType( $results, $search = [] ) {
+		$filtered = $this->_filterErrorType( $results, $search );
+
+		$this->assertNotEmpty( $filtered, 'A matching error was not found: ' . json_encode( $search ) );
+	}
+
+	public function assertNotHasErrorType( $results, $search = [] ) {
+		$filtered = $this->_filterErrorType( $results, $search );
+
+		$this->assertEmpty( $filtered, 'A matching error was found: ' . json_encode( $search ) );
+	}
+
+	protected function _filterErrorType( $results, $search ) {
 		$type   = $search['type'] ?? false;
 		$code   = $search['code'] ?? false;
 		$needle = $search['needle'] ?? false;
 
-		$this->assertIsArray( $results );
+		if ( ! is_array( $results ) ) {
+			return [];
+		}
 
 		if ( $type ) {
 			$results = wp_list_filter( $results, [ 'error_class' => $type ] );
 		}
 
-		$this->assertNotEmpty( $results );
+		if ( ! $results ) {
+			return [];
+		}
 
 		$codes = wp_list_pluck( $results, 'errors' );
 		$codes = call_user_func_array( 'array_merge', $codes );
 
 		if ( $code ) {
-			$this->assertArrayHasKey( $code, $codes );
-			$codes = $codes[ $code ];
+			$codes = $codes[ $code ] ?? [];
 		} else {
 			$codes = call_user_func_array( 'array_merge', $codes );
 		}
 
 		if ( $needle ) {
-			foreach ( $codes as $text ) {
-				if ( false !== stripos( $text, $needle ) ) {
-					break;
+			$codes = array_filter(
+				$codes,
+				static function( $text ) use( $needle ) {
+					return false !== strpos( $text, $needle );
 				}
-			}
-			$this->assertStringContainsString( $needle, $text );
+			);
 		}
+
+		return $codes;
 	}
 }
