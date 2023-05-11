@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @group Checks
+ * @group Header
+ */
 class Test_Header extends PluginCheck_TestCase {
 	public function test_textdomain() {
 		$usage = '

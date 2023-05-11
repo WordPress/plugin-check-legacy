@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @group Checks
+ * @group PHPCS
+ * @group PHPCS-needs-review
+ */
 class Test_PHPCS_Review extends PluginCheck_TestCase {
 	/**
 	 * @dataProvider data_forbidden_function_warnings

@@ -1,9 +1,15 @@
 <?php
 
+/**
+ * @group Checks
+ * @group PHPCS
+ * @group PHPCS-required
+ */
 class Test_PHPCS extends PluginCheck_TestCase {
 	public function test_generic_php_checks() {
 		$results = $this->run_against_string( '<?php
 			start:
+			attempt_to_escape_the_matrix();
 			$whoiam = `whoami`;
 			?><?= $whoiam ?>
 			<% echo $whoiam; %>

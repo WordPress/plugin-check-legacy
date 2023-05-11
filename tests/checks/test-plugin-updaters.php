@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @group Checks
+ * @group PluginUpdaters
+ */
 class Test_Plugin_Updaters extends PluginCheck_TestCase {
 	public function test_update_uri() {
 		$usage = '
