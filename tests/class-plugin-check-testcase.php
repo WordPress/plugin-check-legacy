@@ -3,19 +3,32 @@ use function WordPressdotorg\Plugin_Check\{ run_all_checks };
 
 class PluginCheck_TestCase extends WP_UnitTestCase {
 	public function run_against_string( $string ) {
+		return $this->run_against_virtual_files( [
+			'plugin.php' => $string
+		] );
+	}
+
+	public function run_against_virtual_files( $files ) {
 		$tempname = wp_tempnam( 'plugin-check' );
 		unlink( $tempname );
 		mkdir( $tempname );
 
-		if ( ! str_starts_with( $string,  '<' . '?php' ) ) {
-			$string = "<?php {$string}";
-		}
+		foreach ( $files as $filename => $string ) {
+			$full_filename = "{$tempname}/{$filename}";
 
-		file_put_contents( "$tempname/plugin.php", $string );
+			if ( str_ends_with( $filename, '.php' ) && ! str_starts_with( $string,  '<' . '?php' ) ) {
+				$string = "<?php {$string}";
+			}
+
+			file_put_contents( $full_filename, $string );
+		}
 
 		$results = run_all_checks( $tempname );
 
-		unlink( "$tempname/plugin.php" );
+		// Cleanup
+		foreach ( $files as $filename => $string ) {
+			unlink( "{$tempname}/{$filename}" );
+		}
 		rmdir( $tempname );
 
 		return $results;
