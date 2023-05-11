@@ -16,6 +16,8 @@ class PluginCheck_TestCase extends WP_UnitTestCase {
 		unlink( $tempname );
 		mkdir( $tempname );
 
+		$dirs = [];
+
 		foreach ( $files as $filename => $string ) {
 			$full_filename = "{$tempname}/{$filename}";
 
@@ -23,8 +25,16 @@ class PluginCheck_TestCase extends WP_UnitTestCase {
 				$string = "<?php {$string}";
 			}
 
+			if ( str_contains( $filename, '/' ) ) {
+				$dir = dirname( $full_filename );
+				$dirs[] = $dir;
+				mkdir( $dir, 0777, true );
+			}
+
 			file_put_contents( $full_filename, $string );
 		}
+
+		$dirs[] = $tempname;
 
 		$args[ 'path' ] = $tempname;
 
@@ -34,7 +44,9 @@ class PluginCheck_TestCase extends WP_UnitTestCase {
 		foreach ( $files as $filename => $string ) {
 			unlink( "{$tempname}/{$filename}" );
 		}
-		rmdir( $tempname );
+		foreach ( $dirs as $d ) {
+			rmdir( $d );
+		}
 
 		return $results;
 	}
