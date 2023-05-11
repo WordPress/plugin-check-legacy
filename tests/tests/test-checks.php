@@ -9,15 +9,19 @@ class Test_Functions extends PluginCheck_TestCase {
 		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'Generic.PHP.ForbiddenFunctions.Found', 'needle' => 'function str_rot13() is forbidden' ] );
 	}
 
-	/*
-	 * It's expected that this will fail until #27 is merged.
-	 */
-	public function test_base64() {
-		$usage = 'echo base64_decode( base64_encode( "WordPress" ) );';
+	public function test_base64_encode() {
+		$usage = 'echo base64_encode( "WordPress" );';
 
 		$results = $this->run_against_string( $usage );
 
 		$this->assertHasErrorType( $results, [ 'type' => 'warning', 'code' => 'Generic.PHP.ForbiddenFunctions.Found', 'needle' => 'function base64_encode() is forbidden' ] );
+	}
+
+	public function test_base64_decode() {
+		$usage = 'echo base64_decode( "V29yZFByZXNz" );';
+
+		$results = $this->run_against_string( $usage );
+
 		$this->assertHasErrorType( $results, [ 'type' => 'warning', 'code' => 'Generic.PHP.ForbiddenFunctions.Found', 'needle' => 'function base64_decode() is forbidden' ] );
 	}
 
