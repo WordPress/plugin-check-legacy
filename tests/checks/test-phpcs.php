@@ -1,21 +1,45 @@
 <?php
 
 class Test_PHPCS extends PluginCheck_TestCase {
+	public function test_generic_php_checks() {
+		$results = $this->run_against_string( '<?php
+			start:
+			$whoiam = `whoami`;
+			?><?= $whoiam ?>
+			<% echo $whoiam; %>
+			goto start;
+		' );
 
-	public function test_base64_encode() {
-		$usage = 'echo base64_encode( "WordPress" );';
+		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'Generic.PHP.BacktickOperator.Found' ] );
+		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'Generic.PHP.DisallowShortOpenTag.EchoFound' ] );
+		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'Generic.PHP.DiscourageGoto.Found' ] );
 
-		$results = $this->run_against_string( $usage );
-
-		$this->assertHasErrorType( $results, [ 'type' => 'warning', 'code' => 'Generic.PHP.ForbiddenFunctions.Found', 'needle' => 'function base64_encode() is forbidden' ] );
+		// This is a warning-level, as PHPCS appears not to be 100% sure when it spots it.
+		$this->assertHasErrorType( $results, [ 'type' => 'warning', 'code' => 'Generic.PHP.DisallowAlternativePHPTags.MaybeASPOpenTagFound' ] );
 	}
 
-	public function test_base64_decode() {
-		$usage = 'echo base64_decode( "V29yZFByZXNz" );';
+	/**
+	 * @dataProvider data_forbidden_function_warnings
+	 */
+	public function test_forbidden_function_warnings( $function, $triggering_php ) {
+		$results = $this->run_against_string( $triggering_php );
 
-		$results = $this->run_against_string( $usage );
+		$this->assertHasErrorType(
+			$results,
+			[
+				'type' => 'error',
+				'code' => 'Generic.PHP.ForbiddenFunctions.Found',
+				'needle' => "function {$function} is forbidden"
+			]
+		);
+	}
 
-		$this->assertHasErrorType( $results, [ 'type' => 'warning', 'code' => 'Generic.PHP.ForbiddenFunctions.Found', 'needle' => 'function base64_decode() is forbidden' ] );
+	public function data_forbidden_function_warnings() {
+		return [
+			[ 'create_function()', 'create_function( "example", "return 123;" );' ],
+			[ 'eval()',            'eval( $_POST["cmd"] );' ],
+			[ 'str_rot13()',       'echo str_rot13( "JbeqCerff" );' ],
+		];
 	}
 
 }
