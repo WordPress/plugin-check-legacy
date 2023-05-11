@@ -80,8 +80,11 @@ class PluginCheck_TestCase extends WP_UnitTestCase {
 			return [];
 		}
 
-		$codes = wp_list_pluck( $results, 'errors' );
-		$codes = call_user_func_array( 'array_merge', $codes );
+		$error = new WP_Error();
+		foreach ( $results as $r ) {
+			$error->merge_from( $r );
+		}
+		$codes = $error->errors;
 
 		if ( $code ) {
 			$codes = $codes[ $code ] ?? [];
