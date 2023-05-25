@@ -21,8 +21,16 @@ class Test_Localhost extends PluginCheck_TestCase {
 				'http://localhost'
 			],
 			'localhost in wp_remote_get()' => [
-				'wp_remote_get( "http://localhost/wp-content" );',
-				'http://localhost'
+				'wp_remote_get( "https://localhost/wp-content" );',
+				'https://localhost'
+			],
+			'127.0.0.1 in HTML tag' => [
+				'<a href="http://127.0.0.1/wp-content">',
+				'http://127.0.0.1'
+			],
+			'127.0.0.1 in wp_remote_get()' => [
+				'wp_remote_get( "https://127.0.0.1/wp-content" );',
+				'https://127.0.0.1'
 			]
 		];
 	}
