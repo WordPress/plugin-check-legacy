@@ -2,30 +2,27 @@
 
 /**
  * @group Checks
- * @group CodeObfuscation
+ * @group LocalHost
  */
 class Test_Localhost extends PluginCheck_TestCase {
 	/**
 	 * @dataProvider data_localhost
 	 */
-	public function test_localhost( $file_structure ) {
-		$results = $this->run_against_virtual_files( $file_structure );
+	public function test_for_localhost( $file_content, $expected_needle ) {
+		$results = $this->run_against_string( $file_content );
 
-		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'localhost_code_detected', 'needle' => 'http://localhost' ] );
-		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'localhost_code_detected', 'needle' => 'https://localhost' ] );
+		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'localhost_code_detected', 'needle' => $expected_needle ] );
 	}
 
 	public function data_localhost() {
 		return [
-			[
-				[
-					'plugin.php' => 'http://localhost',
-				]
+			'localhost in HTML tag' => [
+				'<a href="http://localhost/wp-content">',
+				'http://localhost'
 			],
-			[
-				[
-					'plugin.php' => 'https://localhost',
-				]
+			'localhost in wp_remote_get()' => [
+				'wp_remote_get( "http://localhost/wp-content" );',
+				'http://localhost'
 			]
 		];
 	}
