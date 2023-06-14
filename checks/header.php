@@ -3,15 +3,6 @@ namespace WordPressdotorg\Plugin_Check\Checks;
 use WordPressdotorg\Plugin_Check\{Error, Guideline_Violation, Message, Notice, Warning};
 
 class Header extends Check_Base {
-	function check_readmetxt_exists() {
-		if ( ! in_array( 'readme.txt', $this->files, true ) ) {
-			return new Warning(
-				'readme.txt_missing',
-				'readme.txt was not found. readme.txt is a required file.'
-			);
-		}
-	}
-
 	function check_textdomain() {
 		if (
 			! empty( $this->slug ) &&

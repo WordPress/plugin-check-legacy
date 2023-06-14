@@ -3,6 +3,15 @@ namespace WordPressdotorg\Plugin_Check\Checks;
 use WordPressdotorg\Plugin_Check\{Error, Guideline_Violation, Message, Notice, Warning};
 
 class Readme extends Check_Base {
+	public function check_readmetxt_exists() {
+		if ( ! $this->readme ) {
+			return new Warning(
+				'readme.txt_missing',
+				'readme.txt was not found. readme.txt is a required file.'
+			);
+		}
+	}
+
 	public function check_license_present() {
 		if ( $this->readme && empty( $this->readme->license ) ) {
 			return new Error(
