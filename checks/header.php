@@ -6,7 +6,7 @@ class Header extends Check_Base {
 	function check_readmetxt_exists() {
 		if ( ! in_array( 'readme.txt', $this->files, true ) ) {
 			return new Warning(
-				'textdomain_mismatch',
+				'readme.txt_missing',
 				'readme.txt was not found. readme.txt is a required file.'
 			);
 		}
