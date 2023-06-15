@@ -6,8 +6,8 @@ class Readme extends Check_Base {
 	public function check_readmetxt_exists() {
 		if ( ! $this->readme ) {
 			return new Warning(
-				'readme.txt_missing',
-				'readme.txt was not found. readme.txt is a required file.'
+				'readme_missing',
+				'No readme.txt or readme.md was not found. readme.txt/readme.md is a required file.'
 			);
 		}
 	}
