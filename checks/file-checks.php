@@ -35,6 +35,29 @@ class File_Checks extends Check_Base {
 		}
 	}
 
+	function check_application() {
+		$application_files = [ '.sh', '.exe', '.a', '.bin', '.bpk', '.deploy', '.dist', '.distz', '.dmg', '.dms', '.dump', '.elc', '.iso', '.lha', '.lrf', '.lzh', '.o', '.obj', '.pkg', '.so' ];
+
+		$files = array_filter( $this->files, function( $file ) use ( $application_files ) {
+			$extension = sprintf( '.%s', pathinfo( $file, PATHINFO_EXTENSION ) );
+			return in_array( $extension, $application_files, true );
+		} );
+
+		if ( $files ) {
+			$notice_or_error = ( ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || 'production' !== wp_get_environment_type() ) ? Notice::class : Error::class;
+
+			return new $notice_or_error(
+				'application_detected',
+				sprintf(
+					'Application files are not permitted. Found: %s',
+					implode( ', ', array_unique( array_map( function( $file ) {
+						return '<code>' . esc_html( $file ) . '</code>';
+					}, $files ) ) )
+				)
+			);
+		}
+	}
+
 	function check_vcs() {
 		$directories = [ '.git', '.svn', '.hg', '.bzr' ];
 
