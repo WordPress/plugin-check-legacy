@@ -36,7 +36,7 @@ class File_Checks extends Check_Base {
 	}
 
 	function check_application() {
-		$application_files = [ '.sh', '.exe', '.a', '.bin', '.bpk', '.deploy', '.dist', '.distz', '.dmg', '.dms', '.dump', '.elc', '.iso', '.lha', '.lrf', '.lzh', '.o', '.obj', '.pkg', '.so' ];
+		$application_files = [ '.a', '.bin', '.bpk', '.deploy', '.dist', '.distz', '.dmg', '.dms', '.dump', '.elc', '.exe', '.iso', '.lha', '.lrf', '.lzh', '.o', '.obj', '.phar', '.pkg', '.sh', '.so' ];
 
 		$files = array_filter( $this->files, function( $file ) use ( $application_files ) {
 			$extension = sprintf( '.%s', pathinfo( $file, PATHINFO_EXTENSION ) );
