@@ -113,8 +113,8 @@ class Sanitize extends parser {
 				}
 			}
 		}
-		$this->show_log(__('Your code needs to be sanitized.', 'plugin_check'));
-		$this->show_log(__('Your code is processing the entire variable.', 'plugin_check'), 'process_entire');
+		$this->show_log('needs_sanitize');
+		$this->show_log('sanitize_process_entire_var');
 	}
 
 	function process_var($var, $parent=false){
@@ -124,17 +124,17 @@ class Sanitize extends parser {
 			} else {
 				if(!$parent){
 					// Processing the entire $_VAR
-					$this->save_lines_node_detail_log($var->getAttribute('parent'), 'process_entire');
+					$this->save_lines_node_detail_log($var->getAttribute('parent'), 'sanitize_process_entire_var');
 				}
 				$this->process_var_wrapper($var->getAttribute('parent'));
 			}
 		} else {
 			if(!$parent) {
 				// Processing the entire $_VAR
-				$this->save_lines_node_detail_log($var, 'process_entire');
+				$this->save_lines_node_detail_log($var, 'sanitize_process_entire_var');
 			} else {
 				// No sanitizing
-				$this->save_lines_node_detail_log($var);
+				$this->save_lines_node_detail_log($var, 'needs_sanitize');
 			}
 		}
 	}
@@ -149,7 +149,7 @@ class Sanitize extends parser {
 		}
 		if(!$valid){
 			// No sanitizing
-			$this->save_lines_node_detail_log($wrapper);
+			$this->save_lines_node_detail_log($wrapper, 'needs_sanitize');
 		}
 		//var_dump(get_class($wrapper));
 		return $valid;

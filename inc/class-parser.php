@@ -20,6 +20,7 @@ abstract class parser extends Check_Base {
 	public $nodeFinder;
 	public $stmts;
 	private $log = [];
+	public $logMessages = [];
 	public $logErrors = [];
 	private $log_longer_location = [];
 	private $log_already_shown_lines = [];
@@ -221,11 +222,44 @@ abstract class parser extends Check_Base {
 		return $lines;
 	}
 
-	function show_log($message, $logid='default'){
+	function loadLogMessagesVariable(){
+		$this->logMessages = [
+			'needs_sanitize' => [
+				'text' => __('Your code needs to be sanitized.', 'plugin_check'),
+				'type' => 'Error'
+			],
+			'sanitize_process_entire_var' => [
+				'text' => __('Your code is processing the entire variable.', 'plugin_check'),
+				'type' => 'Error'
+			],
+		];
+	}
+
+	function getLogText($logid='default'){
+		if(empty($this->logMessages)){
+			$this->loadLogMessagesVariable();
+		}
+		if(isset($this->logMessages[$logid]['text'])){
+			return $this->logMessages[$logid]['text'];
+		}
+		return __('Error', 'plugin-check');
+	}
+
+	function getLogType($logid='default'){
+		if(empty($this->logMessages)){
+			$this->loadLogMessagesVariable();
+		}
+		if(isset($this->logMessages[$logid]['type'])){
+			return $this->logMessages[$logid]['type'];
+		}
+		return 'Error';
+	}
+
+	function show_log($logid='default'){
 		if(!empty($this->log[$logid])){
 			$text = sprintf(
 				'%s File %s',
-				"<strong>{$message}</strong>",
+				"<strong>{$this->getLogText($logid)}</strong>",
 				$this->fileRelative
 			);
 
@@ -246,7 +280,8 @@ abstract class parser extends Check_Base {
 					);
 				}
 			}
-			$this->logErrors[] = new Error(
+			$logType = '\WordPressdotorg\Plugin_Check\\'.$this->getLogType($logid);
+			$this->logErrors[] = new $logType(
 				'needs_sanitize',
 				$text
 			);
