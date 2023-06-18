@@ -13,11 +13,6 @@ use PhpParser\NodeVisitor\ParentConnectingVisitor;
 use PhpParser\NodeVisitor\NodeConnectingVisitor;
 use PhpParser\Node;
 use PhpParser\NodeFinder;
-use WordPressdotorg\Plugin_Check\Error;
-use WordPressdotorg\Plugin_Check\Guideline_Violation;
-use WordPressdotorg\Plugin_Check\Message;
-use WordPressdotorg\Plugin_Check\Notice;
-use WordPressdotorg\Plugin_Check\Warning;
 use WordPressdotorg\Plugin_Check\Checks\Check_Base;
 
 abstract class Parser extends Check_Base
@@ -30,8 +25,8 @@ abstract class Parser extends Check_Base
     public $nodeFinder;
     public $stmts;
     private $log = [];
-    public $logMessages = [];
-    public $logErrors = [];
+    public $logMessagesTexts = [];
+    public $logMessagesObjects = [];
     private $log_longer_location = [];
     private $log_already_shown_lines = [];
     public $prettyPrinter;
@@ -42,13 +37,13 @@ abstract class Parser extends Check_Base
         if (file_exists($file)) {
             $this->file = $file;
             $this->fileRelative = str_replace($this->path, '', $this->file);
-            $this->parse_file($this->file);
+            $this->parseFile($this->file);
             $this->prettyPrinter = new \PhpParser\PrettyPrinter\Standard;
             if ($this->isReady()) {
                 $this->find();
             }
         } else {
-            $this->logErrors[] = new \WordPressdotorg\Plugin_Check\Notice(
+            $this->logMessagesObjects[] = new \WordPressdotorg\Plugin_Check\Notice(
                 'parser_read_file_error',
                 sprintf('File %s can\'t be read by PHP', $file)
             );
@@ -58,7 +53,7 @@ abstract class Parser extends Check_Base
 
     abstract public function find();
 
-    private function parse_file($file)
+    private function parseFile($file)
     {
         //Options
 
@@ -95,7 +90,7 @@ abstract class Parser extends Check_Base
         return $this->ready;
     }
 
-    public function get_args($args)
+    public function getArgs($args)
     {
         $argsArray = [];
         foreach ($args as $arg) {
@@ -104,19 +99,19 @@ abstract class Parser extends Check_Base
         return '( '.implode(', ', $argsArray).' )';
     }
 
-    public function log_func_call($func_call)
+    public function logFunctionCall($func_call)
     {
         $func_call->setAttribute('comments', null);
-        $this->save_log($func_call->getStartLine(), $this->prettyPrinter->prettyPrint([$func_call]).';');
+        $this->saveLog($func_call->getStartLine(), $this->prettyPrinter->prettyPrint([$func_call]) . ';');
     }
 
-    public function log_namespace($namespace)
+    public function logNamespace($namespace)
     {
         $lineText = 'namespace '.$namespace->name->toCodeString();
-        $this->save_log($namespace->getStartLine(), $lineText);
+        $this->saveLog($namespace->getStartLine(), $lineText);
     }
 
-    public function log_abstraction_declarations($abstraction)
+    public function logAbstractionDeclaration($abstraction)
     {
         if (!empty($abstraction)) {
             foreach ($abstraction as $abstract) {
@@ -139,12 +134,19 @@ abstract class Parser extends Check_Base
                 /*if(!empty($abstract->params) && $abstract->getType()=='Stmt_Function'){
                     $lineText .= " ".$this->get_args($abstract->params);
                 }*/
-                $this->save_log($abstract->getStartLine(), $lineText);
+                $this->saveLog($abstract->getStartLine(), $lineText);
             }
         }
     }
 
-    public function unfold_echo_expr($expr, $exprElements = [])
+	/**
+	 * Breaks down the elements inside an echo and returns an array with each of its elements
+	 * @param $expr
+	 * @param $exprElements
+	 *
+	 * @return array|mixed
+	 */
+    public function unfoldEchoExpr($expr, $exprElements = [])
     {
         if (is_a($expr, 'PhpParser\Node\Expr\BinaryOp\Concat')) {
             $exprElements = array_merge($this->unfold_echo_expr($expr->left, $exprElements), $exprElements);
@@ -157,7 +159,7 @@ abstract class Parser extends Check_Base
         return $exprElements;
     }
 
-    public function has_log($logid = 'default')
+    public function hasLog($logid = 'default')
     {
         if (!empty($this->log[$logid])) {
             return true;
@@ -165,7 +167,7 @@ abstract class Parser extends Check_Base
         return false;
     }
 
-    public function save_log($lineNumber, $text, $logid = 'default')
+    public function saveLog($lineNumber, $text, $logid = 'default')
     {
         $logLine = [
             'location' => $this->fileRelative.":".$lineNumber." ",
@@ -182,7 +184,7 @@ abstract class Parser extends Check_Base
         $this->log[$logid][] = $logLine;
     }
 
-    public function save_lines_log($startLineNumber, $endLineNumber = '', $logid = 'default'): int
+    public function saveLinesLog($startLineNumber, $endLineNumber = '', $logid = 'default'): int
     {
         $lineLenght = 0;
         if (empty($this->log_already_shown_lines[$logid])) {
@@ -195,18 +197,18 @@ abstract class Parser extends Check_Base
             $this->log_already_shown_lines[$logid][$startLineNumber]=[
                 'lineLenght' => $lineLenght
             ];
-            $this->save_log($startLineNumber, $linesString, $logid);
+            $this->saveLog($startLineNumber, $linesString, $logid);
         } else {
             $lineLenght = $this->log_already_shown_lines[$logid][$startLineNumber]['lineLenght'];
         }
         return $lineLenght;
     }
 
-    public function save_lines_node_detail_log($node, $logid = 'default')
+    public function saveLinesNodeDetailLog($node, $logid = 'default')
     {
         $startLine = $node->getStartLine();
 
-        $lineLenght = $this->save_lines_log($startLine, $node->getEndLine(), $logid);
+        $lineLenght = $this->saveLinesLog($startLine, $node->getEndLine(), $logid);
 
         $detail = $this->prettyPrinter->prettyPrint([ $node ]);
         if (strlen($detail) + 20 < $lineLenght) {
@@ -250,7 +252,7 @@ abstract class Parser extends Check_Base
 
     private function loadLogMessagesVariable()
     {
-        $this->logMessages = [
+        $this->logMessagesTexts = [
             'needs_sanitize' => [
                 'text' => __('Your code needs to be sanitized.', 'plugin_check'),
                 'type' => 'Error'
@@ -264,27 +266,27 @@ abstract class Parser extends Check_Base
 
     private function getLogText($logid = 'default')
     {
-        if (empty($this->logMessages)) {
+        if (empty($this->logMessagesTexts)) {
             $this->loadLogMessagesVariable();
         }
-        if (isset($this->logMessages[$logid]['text'])) {
-            return $this->logMessages[$logid]['text'];
+        if (isset($this->logMessagesTexts[$logid]['text'])) {
+            return $this->logMessagesTexts[$logid]['text'];
         }
         return __('Error', 'plugin-check');
     }
 
     private function getLogType($logid = 'default')
     {
-        if (empty($this->logMessages)) {
+        if (empty($this->logMessagesTexts)) {
             $this->loadLogMessagesVariable();
         }
-        if (isset($this->logMessages[$logid]['type'])) {
-            return $this->logMessages[$logid]['type'];
+        if (isset($this->logMessagesTexts[$logid]['type'])) {
+            return $this->logMessagesTexts[$logid]['type'];
         }
         return 'Error';
     }
 
-    public function show_log($logid = 'default')
+    public function showLog($logid = 'default')
     {
         if (!empty($this->log[$logid])) {
             $text = sprintf(
@@ -311,7 +313,7 @@ abstract class Parser extends Check_Base
                 }
             }
             $logType = '\WordPressdotorg\Plugin_Check\\'.$this->getLogType($logid);
-            $this->logErrors[] = new $logType(
+            $this->logMessagesObjects[] = new $logType(
                 'needs_sanitize',
                 $text
             );

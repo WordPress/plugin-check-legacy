@@ -5,17 +5,17 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-use WordPressdotorg\Plugin_Check\Notice;
 use WordPressdotorg\Plugin_Check\Parser;
 use const WordPressdotorg\Plugin_Check\PLUGIN_DIR;
 use const WordPressdotorg\Plugin_Check\HAS_VENDOR;
+
+include_once PLUGIN_DIR . '/inc/class-parser.php';
+
 use PhpParser\Error;
 use PhpParser\NodeDumper;
 use PhpParser\ParserFactory;
 use PhpParser\Node;
 use PhpParser\NodeFinder;
-
-include_once PLUGIN_DIR . '/inc/class-parser.php';
 
 class Sanitize extends Parser
 {
@@ -69,12 +69,16 @@ class Sanitize extends Parser
         'wp_kses_post'
     ];
 
-    public function check_sanitize()
+    public function load($file)
     {
         $this->needsGetParents=true;
+        parent::load($file);
+    }
 
+    public function check_sanitize()
+    {
         if (! HAS_VENDOR) {
-            return new Notice(
+            return new \WordPressdotorg\Plugin_Check\Notice(
                 'sanitize_not_tested',
                 'Sanitize have not been tested, as the vendor directory is missing. Perhaps you need to run <code>`composer install`</code>.'
             );
@@ -86,7 +90,7 @@ class Sanitize extends Parser
                 foreach ($php_files as $file) {
                     $this->load($this->path . $file);
                 }
-                return $this->logErrors;
+                return $this->logMessagesObjects;
             }
         }
 
@@ -122,8 +126,8 @@ class Sanitize extends Parser
                 }
             }
         }
-        $this->show_log('needs_sanitize');
-        $this->show_log('sanitize_process_entire_var');
+        $this->showLog('needs_sanitize');
+        $this->showLog('sanitize_process_entire_var');
     }
 
     private function processVar($var, $parent = false)
@@ -134,17 +138,17 @@ class Sanitize extends Parser
             } else {
                 if (!$parent) {
                     // Processing the entire $_VAR
-                    $this->save_lines_node_detail_log($var->getAttribute('parent'), 'sanitize_process_entire_var');
+                    $this->saveLinesNodeDetailLog($var->getAttribute('parent'), 'sanitize_process_entire_var');
                 }
                 $this->processVarWrapper($var->getAttribute('parent'));
             }
         } else {
             if (!$parent) {
                 // Processing the entire $_VAR
-                $this->save_lines_node_detail_log($var, 'sanitize_process_entire_var');
+                $this->saveLinesNodeDetailLog($var, 'sanitize_process_entire_var');
             } else {
                 // No sanitizing
-                $this->save_lines_node_detail_log($var, 'needs_sanitize');
+                $this->saveLinesNodeDetailLog($var, 'needs_sanitize');
             }
         }
     }
@@ -160,7 +164,7 @@ class Sanitize extends Parser
         }
         if (!$valid) {
             // No sanitizing
-            $this->save_lines_node_detail_log($wrapper, 'needs_sanitize');
+            $this->saveLinesNodeDetailLog($wrapper, 'needs_sanitize');
         }
         //var_dump(get_class($wrapper));
         return $valid;
