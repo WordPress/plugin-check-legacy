@@ -11,11 +11,7 @@ use const WordPressdotorg\Plugin_Check\HAS_VENDOR;
 
 include_once PLUGIN_DIR . '/inc/class-parser.php';
 
-use PhpParser\Error;
-use PhpParser\NodeDumper;
-use PhpParser\ParserFactory;
 use PhpParser\Node;
-use PhpParser\NodeFinder;
 
 class Sanitize extends Parser
 {
@@ -71,13 +67,13 @@ class Sanitize extends Parser
 
     public function load($file)
     {
-        $this->needsGetParents=true;
+        $this->needsGetParents = true;
         parent::load($file);
     }
 
     public function check_sanitize()
     {
-        if (! HAS_VENDOR) {
+        if (!HAS_VENDOR) {
             return new \WordPressdotorg\Plugin_Check\Notice(
                 'sanitize_not_tested',
                 'Sanitize have not been tested, as the vendor directory is missing. Perhaps you need to run <code>`composer install`</code>.'
@@ -86,10 +82,11 @@ class Sanitize extends Parser
 
         if (!empty($this->files)) {
             $php_files = preg_grep('#\.php$#', $this->files);
-            if (!empty($php_files)) {
+            if (! empty($php_files)) {
                 foreach ($php_files as $file) {
                     $this->load($this->path . $file);
                 }
+
                 return $this->logMessagesObjects;
             }
         }
@@ -100,7 +97,7 @@ class Sanitize extends Parser
     public function find()
     {
         // $_POST, $_REQUEST, etc check.
-        $vars = $this->nodeFinder->findInstanceOf($this->stmts, \PhpParser\Node\Expr\Variable::class);
+        $vars = $this->nodeFinder->findInstanceOf($this->stmts, Node\Expr\Variable::class);
         if (!empty($vars)) {
             foreach ($vars as $var) {
                 if (!empty($var->name) && in_array($var->name, $this->needSanitizeVars)) {
@@ -111,7 +108,7 @@ class Sanitize extends Parser
         }
 
         // php://input check
-        $vars = $this->nodeFinder->findInstanceOf($this->stmts, \PhpParser\Node\Expr\FuncCall::class);
+        $vars = $this->nodeFinder->findInstanceOf($this->stmts, Node\Expr\FuncCall::class);
         if (!empty($vars)) {
             foreach ($vars as $var) {
                 if (!empty($var->name) && in_array($var->name, ['file_get_contents'])) {

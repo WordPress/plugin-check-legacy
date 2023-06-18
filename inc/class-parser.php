@@ -33,9 +33,9 @@ abstract class Parser extends Check_Base
 
     public function load($file)
     {
-        $this->log = [];
+	    $this->log = [];
         if (file_exists($file)) {
-            $this->file = $file;
+	        $this->file = $file;
             $this->fileRelative = str_replace($this->path, '', $this->file);
             $this->parseFile($this->file);
             $this->prettyPrinter = new \PhpParser\PrettyPrinter\Standard;
