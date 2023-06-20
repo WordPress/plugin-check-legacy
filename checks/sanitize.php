@@ -26,7 +26,6 @@ class Sanitize extends Parser
 		'_SESSION'
 	];
 
-	//TODO ALPHA: Please recheck with the team.
 	public $commonIntermediateFunctions = [
 		'wp_unslash',
 		'trim'
@@ -38,7 +37,7 @@ class Sanitize extends Parser
 		'absint',
 		'strpos',
 		'in_array',
-		'array_key_exists'
+		'array_key_exists',
 	];
 
 	public $sanitizeFunctions = [
@@ -84,6 +83,7 @@ class Sanitize extends Parser
 			$php_files = preg_grep('#\.php$#', $this->files);
 			if (! empty($php_files)) {
 				foreach ($php_files as $file) {
+					$this->clearLog();
 					$this->load($this->path . $file);
 				}
 
@@ -188,7 +188,7 @@ class Sanitize extends Parser
 						if (isset($node->args[0]->value)) {
 							if ('PhpParser\Node\Scalar\String_' === get_class($node->args[0]->value)) {
 								if (isset($node->args[0]->value->value)) {
-									if (in_array($node->args[0]->value->value, $this->sanitizeFunctions)) {
+									if (in_array($node->args[0]->value->value, $this->sanitizeFunctions) || in_array($node->args[0]->value->value, $this->noSanitizingNeeded)) {
 										return true;
 									}
 								}
@@ -239,6 +239,12 @@ class Sanitize extends Parser
 			case 'PhpParser\Node\Expr\Cast\Bool_':
 				return true;
 				break;
+
+			// Unset
+			case 'PhpParser\Node\Stmt\Unset_':
+				return true;
+				break;
+
 		endswitch;
 
 		return false;

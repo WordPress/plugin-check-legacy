@@ -33,7 +33,6 @@ abstract class Parser extends Check_Base
 
     public function load($file)
     {
-	    $this->log = [];
         if (file_exists($file)) {
 	        $this->file = $file;
             $this->fileRelative = str_replace($this->path, '', $this->file);
@@ -149,7 +148,7 @@ abstract class Parser extends Check_Base
     public function unfoldEchoExpr($expr, $exprElements = [])
     {
         if (is_a($expr, 'PhpParser\Node\Expr\BinaryOp\Concat')) {
-            $exprElements = array_merge($this->unfold_echo_expr($expr->left, $exprElements), $exprElements);
+            $exprElements = array_merge($this->unfoldEchoExpr($expr->left, $exprElements), $exprElements);
             if (!empty($expr->right)) {
                 $exprElements[] = $expr->right;
             }
@@ -184,6 +183,10 @@ abstract class Parser extends Check_Base
         $this->log[$logid][] = $logLine;
     }
 
+	public function clearLog(){
+		$this->log = [];
+	}
+
     public function saveLinesLog($startLineNumber, $endLineNumber = '', $logid = 'default'): int
     {
         $lineLenght = 0;
@@ -210,7 +213,7 @@ abstract class Parser extends Check_Base
 
         $lineLenght = $this->saveLinesLog($startLine, $node->getEndLine(), $logid);
 
-        $detail = $this->prettyPrinter->prettyPrint([ $node ]);
+		$detail = $this->prettyPrinter->prettyPrint([ $node ]);
         if (strlen($detail) + 20 < $lineLenght) {
             foreach ($this->log[ $logid ] as $key => $log) {
                 if ($log['startLine'] === $startLine) {
@@ -261,6 +264,10 @@ abstract class Parser extends Check_Base
                 'text' => __('Your code is processing the entire variable.', 'plugin_check'),
                 'type' => 'Error'
             ],
+            'needs_escape' => [
+	            'text' => __('Your code needs to be escaped.', 'plugin_check'),
+	            'type' => 'Error'
+            ],
         ];
     }
 
@@ -291,19 +298,19 @@ abstract class Parser extends Check_Base
         if (!empty($this->log[$logid])) {
             $text = sprintf(
                 '%s File %s',
-                "<strong>{$this->getLogText($logid)}</strong>",
-                $this->fileRelative
+                '<strong>'.esc_html($this->getLogText($logid)).'</strong>',
+                esc_html($this->fileRelative)
             );
 
             foreach ($this->log[$logid] as $log) {
                 $text .= sprintf(
                     '<br><br>Line %d: %s',
                     $log['startLine'],
-                    "<code>{$log['text']}</code>"
+                    '<code>'.esc_html($log['text']).'</code>'
                 );
                 if (!empty($log['detail'])) {
                     foreach ($log['detail'] as $key => $detail) {
-                        $log['detail'][$key] = '<code>'.$detail.'</code>';
+                        $log['detail'][$key] = '<code>'.esc_html($detail).'</code>';
                     }
                     $detail = implode(', ', $log['detail']);
                     $text .= sprintf(
@@ -314,7 +321,7 @@ abstract class Parser extends Check_Base
             }
             $logType = '\WordPressdotorg\Plugin_Check\\'.$this->getLogType($logid);
             $this->logMessagesObjects[] = new $logType(
-                'needs_sanitize',
+                $logid,
                 $text
             );
         }
