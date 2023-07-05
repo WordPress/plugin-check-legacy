@@ -182,7 +182,7 @@ class Trademarks extends Check_Base {
 			// Trademarks that do NOT end in "-", but are within the FOR_USE_EXCEPTIONS array can be used, but only if it ends with 'for x'
 			$message = sprintf(
 				/* translators: 1: plugin slug, 2: trademarked term */
-				__( 'Your chosen plugin name - %1$s - contains the restricted term "%2$s" which cannot be used within in your plugin name, unless your plugin name with "for %2$s". The term must not appear anywhere else in your name.', 'wporg-plugins' ),
+				__( 'Your chosen plugin name - %1$s - contains the restricted term "%2$s" which cannot be used within in your plugin name, unless your plugin name ends with "for %2$s". The term must still not appear anywhere else in your name.', 'wporg-plugins' ),
 				'<code>' . esc_html( $input ) . '</code>',
 				esc_html( trim( $check, '-' ) )
 			);
