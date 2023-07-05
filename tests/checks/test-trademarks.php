@@ -43,4 +43,12 @@ class Test_Trademark_Checks extends PluginCheck_TestCase {
 
 		$this->assertNotHasErrorType( $results, [ 'type' => 'error', 'code' => 'trademarked_term' ] );
 	}
+
+	public function test_portmanteaus() {
+		$results = $this->run_against_string('<?php
+			// Plugin Name: WooXample
+		');
+
+		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'trademarked_term', 'needle' => 'woo' ] );
+	}
 }

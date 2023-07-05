@@ -243,10 +243,12 @@ class Trademarks extends Check_Base {
 		}
 
 		// Check portmanteaus.
-		foreach ( self::PORTMANTEAUS as $portmanteau ) {
-			if ( 0 === stripos( $slug, $portmanteau ) ) {
-				$has_trademarked_slug = $portmanteau;
-				break;
+		if ( ! $has_trademarked_slug ) {
+			foreach ( self::PORTMANTEAUS as $portmanteau ) {
+				if ( 0 === stripos( $slug, $portmanteau ) ) {
+					$has_trademarked_slug = $portmanteau;
+					break;
+				}
 			}
 		}
 
