@@ -238,7 +238,14 @@ class Trademarks extends Check_Base {
 			// At this point we might be okay, but there's one more check.
 			if ( $for_trademark === substr( $slug, -1 * strlen( $for_trademark ) ) ) {
 				// Yes the slug ENDS with 'for-TRADEMARK'.
-				$has_trademarked_slug = false;
+
+				// Validate that the term still doesn't appear in another position of the slug.
+				$short_slug = substr( $slug, 0, -1 * strlen( $for_trademark ) );
+
+				// If the trademark still doesn't exist in the slug, it's OK.
+				if ( false === strpos( $short_slug, $has_trademarked_slug ) ) {
+					$has_trademarked_slug = false;
+				}
 			}
 		}
 
