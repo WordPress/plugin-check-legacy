@@ -21,6 +21,15 @@ class Test_Trademark_Checks extends PluginCheck_TestCase {
 		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'trademarked_term', 'needle' => 'plugin' ] );
 	}
 
+	public function test_slug() {
+		$results = $this->run_against_virtual_files(
+			[ 'readme.txt' => '=== Example Good Name ===' ],
+			[ 'slug' => 'example-bad-plugin-slug' ]
+		);
+
+		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'trademarked_term', 'needle' => 'plugin' ] );
+	}
+
 	public function test_plugin_headers_for_use_exception() {
 		$results = $this->run_against_string('<?php
 			// Plugin Name: WooCommerce Example String
