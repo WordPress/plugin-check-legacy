@@ -7,18 +7,18 @@
 class Test_Trademark_Checks extends PluginCheck_TestCase {
 	public function test_plugin_headers() {
 		$results = $this->run_against_string('<?php
-			// Plugin Name: Example WordPress Plugin
+			// Plugin Name: Example Plugin
 		' );
 
-		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'trademarked_term', 'needle' => 'wordpress' ] );
+		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'trademarked_term', 'needle' => 'plugin' ] );
 	}
 
 	public function test_readme() {
 		$results = $this->run_against_virtual_files( [
-			'readme.txt' => '=== Example WordPress ==='
+			'readme.txt' => '=== Example Plugin ==='
 		] );
 
-		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'trademarked_term', 'needle' => 'wordpress' ] );
+		$this->assertHasErrorType( $results, [ 'type' => 'error', 'code' => 'trademarked_term', 'needle' => 'plugin' ] );
 	}
 
 	public function test_plugin_headers_for_use_exception() {
