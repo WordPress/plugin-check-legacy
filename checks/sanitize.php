@@ -26,6 +26,10 @@ class Sanitize extends Parser
 		'_SESSION'
 	];
 
+	public $filterInputNeedSanitizeConstants = [
+		'INPUT_GET', 'INPUT_POST', 'INPUT_COOKIE', 'INPUT_SERVER', 'INPUT_ENV'
+	];
+
 	public $commonIntermediateFunctions = [
 		'wp_unslash',
 		'trim'
@@ -38,6 +42,9 @@ class Sanitize extends Parser
 		'strpos',
 		'in_array',
 		'array_key_exists',
+		'is_array',
+		'is_numeric',
+		'strlen'
 	];
 
 	public $sanitizeFunctions = [
@@ -61,7 +68,14 @@ class Sanitize extends Parser
 		'sanitize_user',
 		'sanitize_url',
 		'wp_kses',
-		'wp_kses_post'
+		'wp_kses_post',
+		'wc_clean',
+		'wc_sanitize_order_id'
+	];
+
+	// TODO check if additional filters might be valid. https://www.php.net/manual/en/filter.filters.sanitize.php
+	public $phpValidFilters = [
+		'FILTER_SANITIZE_NUMBER_INT', 'FILTER_SANITIZE_NUMBER_FLOAT', 'FILTER_SANITIZE_STRING'
 	];
 
 	public function load($file)
@@ -83,9 +97,10 @@ class Sanitize extends Parser
 			$php_files = preg_grep('#\.php$#', $this->files);
 			if (! empty($php_files)) {
 				foreach ($php_files as $file) {
-					$this->clearLog();
 					$this->load($this->path . $file);
 				}
+				$this->showLog('needs_sanitize');
+				$this->showLog('sanitize_process_entire_var');
 
 				return $this->logMessagesObjects;
 			}
@@ -100,7 +115,7 @@ class Sanitize extends Parser
 		$vars = $this->nodeFinder->findInstanceOf($this->stmts, Node\Expr\Variable::class);
 		if (! empty($vars)) {
 			foreach ($vars as $var) {
-				if (!empty($var->name) && in_array($var->name, $this->needSanitizeVars)) {
+				if($this->isNeedSanitizeVar($var)){
 					$var->setAttribute('comments', null);
 					$this->processVar($var);
 				}
@@ -111,20 +126,45 @@ class Sanitize extends Parser
 		$vars = $this->nodeFinder->findInstanceOf($this->stmts, Node\Expr\FuncCall::class);
 		if (!empty($vars)) {
 			foreach ($vars as $var) {
-				if (!empty($var->name) && in_array($var->name, ['file_get_contents'])) {
-					if (isset($var->args[0])) {
-						if ('PhpParser\Node\Scalar\String_' === get_class($var->args[0]->value)) {
-							if ('php://input' === $var->args[0]->value->value) {
-								$var->setAttribute('comments', null);
-								$this->processVar($var);
-							}
+				if($this->isNeedSanitizeVar($var)){
+					$var->setAttribute('comments', null);
+					$this->processVar($var);
+				}
+			}
+		}
+	}
+
+	function isNeedSanitizeVar($var){
+		$class = get_class($var);
+		if('PhpParser\Node\Expr\ArrayDimFetch'===$class){
+			return $this->isNeedSanitizeVar($var->var);
+		}
+		if(in_array($class, ['PhpParser\Node\Expr\Variable'])) {
+			if ( ! empty( $var->name ) && in_array( $var->name, $this->needSanitizeVars ) ) {
+				return true;
+			}
+		} else if ( 'PhpParser\Node\Expr\FuncCall' === $class ) {
+			if (!empty($var->name) && in_array($var->name, ['file_get_contents'])) {
+				if (isset($var->args[0])) {
+					if ('PhpParser\Node\Scalar\String_' === get_class($var->args[0]->value)) {
+						if ('php://input' === $var->args[0]->value->value) {
+							return true;
+						}
+					}
+				}
+			}
+			if (!empty($var->name) && in_array($var->name, ['filter_input'])) {
+				if (isset($var->args[0])) {
+					if ('PhpParser\Node\Expr\ConstFetch' === get_class($var->args[0]->value)) {
+						if (in_array($var->args[0]->value->name->__toString(), $this->filterInputNeedSanitizeConstants)) {
+							$var->setAttribute('comments', null);
+							$this->processVarWrapper($var);
+							return false;
 						}
 					}
 				}
 			}
 		}
-		$this->showLog('needs_sanitize');
-		$this->showLog('sanitize_process_entire_var');
 	}
 
 	private function processVar($var, $parent = false)
@@ -177,18 +217,36 @@ class Sanitize extends Parser
 		switch ($class) :
 			// Functions
 			case 'PhpParser\Node\Expr\FuncCall':
-				if (!empty($node->name->toCodeString())) {
-					if (in_array($node->name->toCodeString(), $this->sanitizeFunctions)) {
-						return true;
-					} elseif (in_array($node->name->toCodeString(), $this->noSanitizingNeeded)) {
-						return true;
-					} elseif (in_array($node->name->toCodeString(), $this->commonIntermediateFunctions)) {
-						return $this->processVarWrapper($node->getAttribute("parent"));
-					} elseif ('array_map' === $node->name->toCodeString()) {
-						if (isset($node->args[0]->value)) {
-							if ('PhpParser\Node\Scalar\String_' === get_class($node->args[0]->value)) {
-								if (isset($node->args[0]->value->value)) {
-									if (in_array($node->args[0]->value->value, $this->sanitizeFunctions) || in_array($node->args[0]->value->value, $this->noSanitizingNeeded)) {
+				if ($this->hasFunctionName($node)) {
+					if ( ! empty( $node->name->toCodeString() ) ) {
+						if ( in_array( $node->name->toCodeString(), $this->sanitizeFunctions ) ) {
+							return true;
+						} elseif ( in_array( $node->name->toCodeString(), $this->noSanitizingNeeded ) ) {
+							return true;
+						} elseif ( in_array( $node->name->toCodeString(), $this->commonIntermediateFunctions ) ) {
+							return $this->processVarWrapper( $node->getAttribute( "parent" ) );
+						} elseif ( 'array_map' === $node->name->toCodeString() ) {
+							if ( isset( $node->args[0]->value ) ) {
+								if ( 'PhpParser\Node\Scalar\String_' === get_class( $node->args[0]->value ) ) {
+									if ( isset( $node->args[0]->value->value ) ) {
+										if ( in_array( $node->args[0]->value->value, $this->sanitizeFunctions ) || in_array( $node->args[0]->value->value, $this->noSanitizingNeeded ) ) {
+											return true;
+										}
+									}
+								}
+							}
+						} elseif ('filter_var' === $node->name->toCodeString() ){
+							if ( isset( $node->args[1]->value ) ) {
+								if( 'PhpParser\Node\Expr\ConstFetch' === get_class($node->args[1]->value)) {
+									if(in_array($node->args[1]->value->name->__toString(), $this->phpValidFilters)){
+										return true;
+									}
+								}
+							}
+						} elseif ('filter_input' === $node->name->toCodeString() ){
+							if ( isset( $node->args[2]->value ) ) {
+								if( 'PhpParser\Node\Expr\ConstFetch' === get_class($node->args[2]->value)) {
+									if(in_array($node->args[2]->value->name->__toString(), $this->phpValidFilters)){
 										return true;
 									}
 								}
@@ -231,7 +289,24 @@ class Sanitize extends Parser
 			case 'PhpParser\Node\Expr\BinaryOp\Div':
 			case 'PhpParser\Node\Expr\BinaryOp\Mod':
 			case 'PhpParser\Node\Expr\BinaryOp\Coalesce':
+			//case 'PhpParser\Node\Expr\Ternary':
 				return $this->processVarWrapper($node->getAttribute("parent"));
+				break;
+
+			// Assign - Check only the expression part.
+			case 'PhpParser\Node\Expr\Assign':
+				if(isset($node->expr)) {
+					$exprClass = get_class($node->expr);
+					if(in_array($exprClass, ['PhpParser\Node\Expr\Variable', 'PhpParser\Node\Expr\ArrayDimFetch'])) {
+						if ( !$this->isNeedSanitizeVar( $node->expr ) ) {
+							return true;
+						}
+					}
+					if(in_array($exprClass, ['PhpParser\Node\Expr\ConstFetch', 'PhpParser\Node\Scalar\String_'])){
+						return true;
+					}
+				}
+				return false;
 				break;
 
 			// Casting

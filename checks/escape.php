@@ -28,6 +28,7 @@ class Escape extends Parser {
 		'rand',
 		'mt_rand',
 		'post_class',
+		'selected'
 	];
 
 	public $escapingFunctions = [
@@ -76,9 +77,10 @@ class Escape extends Parser {
 			$php_files = preg_grep('#\.php$#', $this->files);
 			if (! empty($php_files)) {
 				foreach ($php_files as $file) {
-					$this->clearLog();
 					$this->load($this->path . $file);
 				}
+
+				$this->showLog('needs_escape');
 
 				return $this->logMessagesObjects;
 			}
@@ -94,7 +96,6 @@ class Escape extends Parser {
 				$this->process_echo( $echo );
 			}
 		}
-		$this->showLog('needs_escape');
 	}
 
 	function process_echo( $echo ) {
@@ -102,7 +103,7 @@ class Escape extends Parser {
 			$this->mightBeWrong = false;
 			$exprs              = $echo->exprs;
 			foreach ( $exprs as $expr ) {
-				$exprElements = $this->unfoldEchoExpr( $expr ); //Array of all the elements that are contained in the echo.
+				$exprElements = $this->unfoldConcatExpr( $expr ); //Array of all the elements that are contained in the echo.
 				if ( ! empty( $exprElements ) ) {
 					foreach ( $exprElements as $element ) {
 						if ( ! $this->isThisValidForEscaping( $element ) ) {
@@ -123,21 +124,22 @@ class Escape extends Parser {
 		//var_dump($class);
 
 		switch ( $class ):
-			// String
+			// String and Number
 			case 'PhpParser\Node\Scalar\String_':
+			case 'PhpParser\Node\Scalar\LNumber':
 				return true;
 				break;
 
 			// Functions
 			case 'PhpParser\Node\Expr\FuncCall':
-				if ( in_array( $node->name->toCodeString(), $this->escapingFunctions ) ) {
-					$this->mightBeWrong = true;
-
-					return true;
-				} else if ( in_array( $node->name->toCodeString(), $this->noEscapingNeeded ) ) {
-					$this->mightBeWrong = true;
-
-					return true;
+				if ($this->hasFunctionName($node)) {
+					if ( in_array( $node->name->toCodeString(), $this->escapingFunctions ) ) {
+						$this->mightBeWrong = true;
+						return true;
+					} else if ( in_array( $node->name->toCodeString(), $this->noEscapingNeeded ) ) {
+						$this->mightBeWrong = false;
+						return true;
+					}
 				}
 				break;
 
