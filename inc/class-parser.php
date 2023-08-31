@@ -30,6 +30,171 @@ abstract class Parser extends Check_Base {
 	private $log_already_shown_lines = [];
 	public $prettyPrinter;
 
+	// Known functions
+	public $sanitizeFunctions = [
+		'sanitize_email',
+		'sanitize_file_name',
+		'sanitize_hex_color',
+		'sanitize_hex_color_no_hash',
+		'sanitize_html_class',
+		'sanitize_key',
+		'sanitize_meta',
+		'sanitize_mime_type',
+		'sanitize_option',
+		'sanitize_sql_orderby',
+		'sanitize_term',
+		'sanitize_term_field',
+		'sanitize_text_field',
+		'sanitize_textarea_field',
+		'sanitize_title',
+		'sanitize_title_for_query',
+		'sanitize_title_with_dashes',
+		'sanitize_user',
+		'sanitize_url',
+		'wp_kses',
+		'wp_kses_post',
+		'wc_clean',
+		'wc_sanitize_order_id'
+	];
+	public $escapingFunctions = [
+		'esc_html',
+		'esc_html__',
+		'esc_html_x',
+		'esc_html_e',
+		'esc_js',
+		'esc_url',
+		'esc_url_raw',
+		'esc_xml',
+		'esc_attr',
+		'esc_attr__',
+		'esc_attr_x',
+		'esc_attr_e',
+		'esc_textarea',
+		'wp_kses',
+		'wp_kses_post',
+		'wp_kses_data',
+		'ent2ncr',
+		'tag_escape'
+	];
+
+	//TODO For known WP and WC options and hooks, ignore them in Prefix and maybe warn them in Calls.
+	//TODO Hooks reference: https://github.com/wp-hooks/wordpress-core-hooks
+	public $knownOptions = [
+		'siteurl',
+		'home',
+		'blogname',
+		'blogdescription',
+		'users_can_register',
+		'admin_email',
+		'start_of_week',
+		'use_balanceTags',
+		'use_smilies',
+		'require_name_email',
+		'comments_notify',
+		'posts_per_rss',
+		'rss_use_excerpt',
+		'mailserver_url',
+		'mailserver_login',
+		'mailserver_pass',
+		'mailserver_port',
+		'default_category',
+		'default_comment_status',
+		'default_ping_status',
+		'default_pingback_flag',
+		'posts_per_page',
+		'date_format',
+		'time_format',
+		'links_updated_date_format',
+		'comment_moderation',
+		'moderation_notify',
+		'permalink_structure',
+		'rewrite_rules',
+		'hack_file',
+		'blog_charset',
+		'moderation_keys',
+		'active_plugins',
+		'category_base',
+		'ping_sites',
+		'comment_max_links',
+		'gmt_offset',
+		'default_email_category',
+		'recently_edited',
+		'template',
+		'stylesheet',
+		'comment_registration',
+		'html_type',
+		'use_trackback',
+		'default_role',
+		'db_version',
+		'uploads_use_yearmonth_folders',
+		'upload_path',
+		'blog_public',
+		'default_link_category',
+		'show_on_front',
+		'tag_base',
+		'show_avatars',
+		'avatar_rating',
+		'upload_url_path',
+		'thumbnail_size_w',
+		'thumbnail_size_h',
+		'thumbnail_crop',
+		'medium_size_w',
+		'medium_size_h',
+		'avatar_default',
+		'large_size_w',
+		'large_size_h',
+		'image_default_link_type',
+		'image_default_size',
+		'image_default_align',
+		'close_comments_for_old_posts',
+		'close_comments_days_old',
+		'thread_comments',
+		'thread_comments_depth',
+		'page_comments',
+		'comments_per_page',
+		'default_comments_page',
+		'comment_order',
+		'sticky_posts',
+		'widget_categories',
+		'widget_text',
+		'widget_rss',
+		'uninstall_plugins',
+		'timezone_string',
+		'page_for_posts',
+		'page_on_front',
+		'default_post_format',
+		'link_manager_enabled',
+		'finished_splitting_shared_terms',
+		'site_icon',
+		'medium_large_size_w',
+		'medium_large_size_h',
+		'wp_page_for_privacy_policy',
+		'show_comments_cookies_opt_in',
+		'admin_email_lifespan',
+		'disallowed_keys',
+		'comment_previously_approved',
+		'auto_plugin_theme_update_emails',
+		'auto_update_core_dev',
+		'auto_update_core_minor',
+		'auto_update_core_major',
+		'wp_force_deactivated_plugins',
+		'initial_db_version',
+		'wp_user_roles',
+		'fresh_site',
+		'user_count',
+		'widget_block',
+		'sidebars_widgets',
+		'cron',
+		'recovery_keys',
+		'https_detection_errors',
+		'can_compress_scripts',
+		'recently_activated',
+		'finished_updating_comment_type',
+		'new_admin_email'
+	];
+	public $knownHooksActions = [];
+	public $knownHooksFilters = [];
+
 	public function load( $file ) {
 		if ( file_exists( $file ) ) {
 			$this->file         = $file;
@@ -76,11 +241,24 @@ abstract class Parser extends Check_Base {
 			}
 		} catch ( \PhpParser\Error $error ) {
 			echo $this->fileRelative . ": Parse error: {$error->getMessage()}\n";
-
 			return;
 		}
 		$this->nodeFinder = new NodeFinder;
 		$this->ready      = true;
+	}
+
+	public function parseCode($code){
+		$stmts = '';
+		if(!empty($code)) {
+			$parser = ( new ParserFactory )->create( ParserFactory::PREFER_PHP7 );
+			try {
+				$stmts = $parser->parse( $code );
+			} catch ( Error $error ) {
+				echo "Parse error: {$error->getMessage()}\n";
+				return;
+			}
+		}
+		return $stmts;
 	}
 
 	public function isReady() {
@@ -97,19 +275,19 @@ abstract class Parser extends Check_Base {
 	}
 
 
-	public function logFunctionCall( $func_call, $argposition, $logid ) {
+	public function logFunctionCall( $func_call, $argposition, $logid, $unique=false ) {
+		$func_call->setAttribute( 'comments', null );
+		$this->saveLog( $func_call->getStartLine(), $this->prettyPrinter->prettyPrint( [ $func_call ] ) . ';', $logid, $unique );
+		$logkey = array_key_last( $this->log[ $logid ] );
+		if ( 'PhpParser\Node\Name' === get_class( $func_call->name ) ) {
+			$funcname = $func_call->name->__toString();
+		} else {
+			$funcname = get_class( $func_call->name );
+		}
+		$this->log[ $logid ][ $logkey ]['type'] = 'function_call-' . $funcname;
 		if ( isset( $func_call->args[ $argposition ] ) ) {
-			$func_call->setAttribute( 'comments', null );
-			$this->saveLog( $func_call->getStartLine(), $this->prettyPrinter->prettyPrint( [ $func_call ] ) . ';', $logid );
-			$logkey = array_key_last( $this->log[ $logid ] );
-			if ( 'PhpParser\Node\Name' === get_class( $func_call->name ) ) {
-				$funcname = $func_call->name->__toString();
-			} else {
-				$funcname = get_class( $func_call->name );
-			}
-			$this->log[ $logid ][ $logkey ]['type'] = 'function_call-' . $funcname;
-			$arg                                    = $func_call->args[ $argposition ];
-			if ( get_class( $arg->value ) === 'PhpParser\Node\Scalar\String_' ) {
+			$arg = $func_call->args[ $argposition ];
+			if ( isset( $arg->value ) && get_class( $arg->value ) === 'PhpParser\Node\Scalar\String_' ) {
 				$this->log[ $logid ][ $logkey ]['name'] = $arg->value->value;
 			}
 		}
@@ -196,7 +374,7 @@ abstract class Parser extends Check_Base {
 		return false;
 	}
 
-	public function saveLog( $lineNumber, $text, $logid = 'default' ) {
+	public function saveLog( $lineNumber, $text, $logid = 'default', $unique=false ) {
 		$logLine = [
 			'location'      => "",
 			'text'          => $text,
@@ -212,7 +390,12 @@ abstract class Parser extends Check_Base {
 		if ( strlen( $logLine['location'] ) > $this->log_longer_location[ $logid ] ) {
 			$this->log_longer_location[ $logid ] = strlen( $logLine['location'] );
 		}
-		$this->log[ $logid ][] = $logLine;
+		if($unique) {
+			$lineId = $this->getLogLineID($lineNumber);
+			$this->log[ $logid ][ $lineId ] = $logLine;
+		} else {
+			$this->log[ $logid ][ ] = $logLine;
+		}
 	}
 
 	public function clearLog() {
@@ -246,16 +429,24 @@ abstract class Parser extends Check_Base {
 		return $sanitized_filerelative.'_'.$lineNumber;
 	}
 
+	public function hasLogLineID($lineId, $logid){
+		if(isset($this->log[ $logid ][ $lineId ])){
+			return true;
+		}
+		return false;
+	}
+
 	public function saveLinesNodeDetailLog( $node, $logid = 'default' ) {
 		$lineLenght = $this->saveLinesLog( $node->getStartLine(), $node->getEndLine(), $logid );
-
-		$detail = $this->prettyPrinter->prettyPrint( [ $node ] );
-		if ( strlen( $detail ) < $lineLenght / 2 ) {
-			$logkey = array_key_last( $this->log[ $logid ] );
-			if ( empty( $this->log[ $logid ][ $logkey ]['detail'] ) ) {
-				$this->log[ $logid ][ $logkey ]['detail'] = [];
+		if ( $lineLenght > 80 ) {
+			$detail = $this->prettyPrinter->prettyPrint( [ $node ] );
+			if ( strlen( $detail ) < $lineLenght / 2 ) {
+				$logkey = array_key_last( $this->log[ $logid ] );
+				if ( empty( $this->log[ $logid ][ $logkey ]['detail'] ) ) {
+					$this->log[ $logid ][ $logkey ]['detail'] = [];
+				}
+				$this->log[ $logid ][ $logkey ]['detail'][] = $detail;
 			}
-			$this->log[ $logid ][ $logkey ]['detail'][] = $detail;
 		}
 	}
 

@@ -28,34 +28,8 @@ class Escape extends Parser {
 		'rand',
 		'mt_rand',
 		'post_class',
-		'selected'
-	];
-
-	public $escapingFunctions = [
-		'esc_html',
-		'esc_html__',
-		'esc_html_x',
-		'esc_html_e',
-		'esc_js',
-		'esc_url',
-		'esc_url_raw',
-		'esc_xml',
-		'esc_attr',
-		'esc_attr__',
-		'esc_attr_x',
-		'esc_attr_e',
-		'esc_textarea',
-		'wp_kses',
-		'wp_kses_post',
-		'wp_kses_data',
-		'esc_html__',
-		'esc_html_e',
-		'esc_html_x',
-		'esc_attr__',
-		'esc_attr_e',
-		'esc_attr_x',
-		'ent2ncr',
-		'tag_escape'
+		'selected',
+		'checked'
 	];
 
 	private $mightBeWrong = false;
@@ -89,32 +63,69 @@ class Escape extends Parser {
 	}
 
 	function find() {
+		// echo
 		$echos = $this->nodeFinder->findInstanceOf( $this->stmts, Node\Stmt\Echo_::class );
 		if ( ! empty( $echos ) ) {
 			foreach ( $echos as $echo ) {
 				$echo->setAttribute( 'comments', null );
-				$this->process_echo( $echo );
+				$this->process_echo_or_print_or_function( $echo );
+			}
+		}
+
+		// print
+		$prints = $this->nodeFinder->findInstanceOf( $this->stmts, PhpParser\Node\Expr\Print_::class );
+		if ( ! empty( $prints ) ) {
+			foreach ( $prints as $print ) {
+				$print->setAttribute( 'comments', null );
+				$this->process_echo_or_print_or_function( $print );
+			}
+		}
+
+		// Look for printf function
+		$funcCalls = $this->nodeFinder->findInstanceOf( $this->stmts, Node\Expr\FuncCall::class );
+		if ( ! empty( $funcCalls ) ) {
+			foreach ( $funcCalls as $funccall ) {
+				if ($this->hasFunctionName($funccall) && in_array($funccall->name->toString(), ['printf'])){
+					$funccall->setAttribute( 'comments', null );
+					$this->process_echo_or_print_or_function( $funccall );
+				}
 			}
 		}
 	}
 
-	function process_echo( $echo ) {
-		if ( ! empty( $echo->exprs ) ) {
+	function process_echo_or_print_or_function( $node ) {
+		if ( ! empty( $node->exprs ) || ! empty( $node->expr ) || !empty($node->args) ) {
 			$this->mightBeWrong = false;
-			$exprs              = $echo->exprs;
+			$isEcho = false;
+			$isFunction = false;
+			if(!empty($node->exprs)){
+				$isEcho = true;
+				$exprs              = $node->exprs;
+			} else if(!empty($node->expr)){
+				$isEcho = true;
+				$exprs              = [$node->expr];
+			} else if (!empty($node->args)){
+				$isFunction = true;
+				$exprs              = $node->args;
+			}
 			foreach ( $exprs as $expr ) {
 				$exprElements = $this->unfoldConcatExpr( $expr ); //Array of all the elements that are contained in the echo.
 				if ( ! empty( $exprElements ) ) {
 					foreach ( $exprElements as $element ) {
 						if ( ! $this->isThisValidForEscaping( $element ) ) {
-							$this->saveLinesNodeDetailLog( $echo, 'needs_escape' );
+							if($isEcho) {
+								$this->saveLinesNodeDetailLog( $node, 'needs_escape' );
+							}
+							if ($isFunction){
+								$this->saveLinesNodeDetailLog( $element, 'needs_escape' );
+							}
 							return;
 						}
 					}
 				}
 			}
 			if ( $this->mightBeWrong ) {
-				$this->saveLinesLog( $echo->getStartLine(), $echo->getEndLine(), 'escape_mightBeWrong' );
+				$this->saveLinesLog( $node->getStartLine(), $node->getEndLine(), 'escape_mightBeWrong' );
 			}
 		}
 	}
@@ -124,6 +135,14 @@ class Escape extends Parser {
 		//var_dump($class);
 
 		switch ( $class ):
+			// Arg: Read what's inside
+			case 'PhpParser\Node\Arg':
+				if(!empty($node->value)){
+					return $this->isThisValidForEscaping($node->value);
+				}
+				return true;
+				break;
+
 			// String and Number
 			case 'PhpParser\Node\Scalar\String_':
 			case 'PhpParser\Node\Scalar\LNumber':
@@ -133,13 +152,23 @@ class Escape extends Parser {
 			// Functions
 			case 'PhpParser\Node\Expr\FuncCall':
 				if ($this->hasFunctionName($node)) {
-					if ( in_array( $node->name->toCodeString(), $this->escapingFunctions ) ) {
+					if ( in_array( $node->name->toString(), $this->escapingFunctions ) ) {
 						$this->mightBeWrong = true;
 						return true;
-					} else if ( in_array( $node->name->toCodeString(), $this->noEscapingNeeded ) ) {
+					} else if ( in_array( $node->name->toString(), $this->noEscapingNeeded ) ) {
+						$this->mightBeWrong = false;
+						return true;
+					} else if ( in_array( $node->name->toString(), ['sprintf'] ) ) {
+						$this->process_echo_or_print_or_function($node);
 						$this->mightBeWrong = false;
 						return true;
 					}
+
+					// TODO Confusing sanitizing with escaping
+					if(in_array( $node->name->toString(), $this->sanitizeFunctions )){
+						$this->saveLinesNodeDetailLog($node, 'needs_escape_confusion_sanitize');
+					}
+
 				}
 				break;
 

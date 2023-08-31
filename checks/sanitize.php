@@ -32,46 +32,29 @@ class Sanitize extends Parser
 
 	public $commonIntermediateFunctions = [
 		'wp_unslash',
-		'trim'
+		'trim',
+		'array_key_first',
+		'basename',
+		'strtolower'
 	];
 
 	public $noSanitizingNeeded = [
-		'wp_verify_nonce',
 		'intval',
 		'absint',
 		'strpos',
 		'in_array',
 		'array_key_exists',
+		'key_exists',
 		'is_array',
 		'is_numeric',
-		'strlen'
+		'strlen',
+		'count',
+		'stripos',
+		'is_plugin_inactive',
+		'wp_handle_upload',
+		'wp_parse_id_list'
 	];
 
-	public $sanitizeFunctions = [
-		'sanitize_email',
-		'sanitize_file_name',
-		'sanitize_hex_color',
-		'sanitize_hex_color_no_hash',
-		'sanitize_html_class',
-		'sanitize_key',
-		'sanitize_meta',
-		'sanitize_mime_type',
-		'sanitize_option',
-		'sanitize_sql_orderby',
-		'sanitize_term',
-		'sanitize_term_field',
-		'sanitize_text_field',
-		'sanitize_textarea_field',
-		'sanitize_title',
-		'sanitize_title_for_query',
-		'sanitize_title_with_dashes',
-		'sanitize_user',
-		'sanitize_url',
-		'wp_kses',
-		'wp_kses_post',
-		'wc_clean',
-		'wc_sanitize_order_id'
-	];
 
 	// TODO check if additional filters might be valid. https://www.php.net/manual/en/filter.filters.sanitize.php
 	public $phpValidFilters = [
@@ -101,6 +84,7 @@ class Sanitize extends Parser
 				}
 				$this->showLog('needs_sanitize');
 				$this->showLog('sanitize_process_entire_var');
+				$this->showLog('needs_sanitize_confusion_escape');
 
 				return $this->logMessagesObjects;
 			}
@@ -173,6 +157,11 @@ class Sanitize extends Parser
 			if ('PhpParser\Node\Expr\ArrayDimFetch' === get_class($var->getAttribute('parent'))) {
 				$this->processVar($var->getAttribute('parent'), true);
 			} else {
+				if('PhpParser\Node\Expr\Assign' === get_class($var->getAttribute('parent'))) {
+					if ( $var !== $var->getAttribute( 'parent' )->expr ) {
+						return; // This is the saved variable in the assign.
+					}
+				}
 				if (!$parent) {
 					// Processing the entire $_VAR
 					if (!$this->isThisValidForEntireVar($var->getAttribute('parent'))) {
@@ -218,14 +207,14 @@ class Sanitize extends Parser
 			// Functions
 			case 'PhpParser\Node\Expr\FuncCall':
 				if ($this->hasFunctionName($node)) {
-					if ( ! empty( $node->name->toCodeString() ) ) {
-						if ( in_array( $node->name->toCodeString(), $this->sanitizeFunctions ) ) {
+					if ( ! empty( $node->name->toString() ) ) {
+						if ( in_array( $node->name->toString(), $this->sanitizeFunctions ) ) {
 							return true;
-						} elseif ( in_array( $node->name->toCodeString(), $this->noSanitizingNeeded ) ) {
+						} elseif ( in_array( $node->name->toString(), $this->noSanitizingNeeded ) ) {
 							return true;
-						} elseif ( in_array( $node->name->toCodeString(), $this->commonIntermediateFunctions ) ) {
+						} elseif ( in_array( $node->name->toString(), $this->commonIntermediateFunctions ) ) {
 							return $this->processVarWrapper( $node->getAttribute( "parent" ) );
-						} elseif ( 'array_map' === $node->name->toCodeString() ) {
+						} elseif ( 'array_map' === $node->name->toString() ) {
 							if ( isset( $node->args[0]->value ) ) {
 								if ( 'PhpParser\Node\Scalar\String_' === get_class( $node->args[0]->value ) ) {
 									if ( isset( $node->args[0]->value->value ) ) {
@@ -235,7 +224,17 @@ class Sanitize extends Parser
 									}
 								}
 							}
-						} elseif ('filter_var' === $node->name->toCodeString() ){
+						} elseif ( in_array($node->name->toString(), ['array_walk', 'array_walk_recursive', 'map_deep']) ) {
+							if ( isset( $node->args[1]->value ) ) {
+								if ( 'PhpParser\Node\Scalar\String_' === get_class( $node->args[1]->value ) ) {
+									if ( isset( $node->args[1]->value->value ) ) {
+										if ( in_array( $node->args[1]->value->value, $this->sanitizeFunctions ) || in_array( $node->args[1]->value->value, $this->noSanitizingNeeded ) ) {
+											return true;
+										}
+									}
+								}
+							}
+						} elseif ('filter_var' === $node->name->toString() ){
 							if ( isset( $node->args[1]->value ) ) {
 								if( 'PhpParser\Node\Expr\ConstFetch' === get_class($node->args[1]->value)) {
 									if(in_array($node->args[1]->value->name->__toString(), $this->phpValidFilters)){
@@ -243,7 +242,7 @@ class Sanitize extends Parser
 									}
 								}
 							}
-						} elseif ('filter_input' === $node->name->toCodeString() ){
+						} elseif ('filter_input' === $node->name->toString() ){
 							if ( isset( $node->args[2]->value ) ) {
 								if( 'PhpParser\Node\Expr\ConstFetch' === get_class($node->args[2]->value)) {
 									if(in_array($node->args[2]->value->name->__toString(), $this->phpValidFilters)){
@@ -251,6 +250,11 @@ class Sanitize extends Parser
 									}
 								}
 							}
+						}
+
+						// Confusing escaping with sanitizing
+						if(in_array( $node->name->toString(), $this->escapingFunctions )){
+							$this->saveLinesNodeDetailLog($node, 'needs_sanitize_confusion_escape');
 						}
 					}
 				}
@@ -293,19 +297,14 @@ class Sanitize extends Parser
 				return $this->processVarWrapper($node->getAttribute("parent"));
 				break;
 
-			// Assign - Check only the expression part.
+			// Casting to itself or error supress (weird development somewhere)
+			case 'PhpParser\Node\Expr\Cast\Array_':
+			case 'PhpParser\Node\Expr\ErrorSuppress':
+				return $this->processVarWrapper($node->getAttribute("parent"));
+				break;
+
+			// Assign - Only the expression part.
 			case 'PhpParser\Node\Expr\Assign':
-				if(isset($node->expr)) {
-					$exprClass = get_class($node->expr);
-					if(in_array($exprClass, ['PhpParser\Node\Expr\Variable', 'PhpParser\Node\Expr\ArrayDimFetch'])) {
-						if ( !$this->isNeedSanitizeVar( $node->expr ) ) {
-							return true;
-						}
-					}
-					if(in_array($exprClass, ['PhpParser\Node\Expr\ConstFetch', 'PhpParser\Node\Scalar\String_'])){
-						return true;
-					}
-				}
 				return false;
 				break;
 
@@ -317,6 +316,11 @@ class Sanitize extends Parser
 
 			// Unset
 			case 'PhpParser\Node\Stmt\Unset_':
+				return true;
+				break;
+
+			// Switch
+			case 'PhpParser\Node\Stmt\Switch_':
 				return true;
 				break;
 
