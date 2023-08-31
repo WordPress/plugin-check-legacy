@@ -8,7 +8,7 @@ Plugin Check
 
 Plugin Check is a tool for the WordPress.org plugins review team.
 
-## Description #
+## Description ##
 
 Plugin Check is a tool for the WordPress.org plugins review team.
 This is intended as a generic tool that is not at all intended on being complete.
@@ -22,9 +22,3 @@ Commands:
  - `npm run wp-env start`
  - `npm test`
 
-## Changelog ##
-
-= [1.0.0] TBD =
-
-* Feature - Enable modification of the PHP Binary path used by the plugin with `PLUGIN_CHECK_PHP_BIN` constant.
-* Tweak - Disallow functions `move_uploaded_file`, `passthru`, `proc_open` - Props alexsanford at [#50](https://github.com/WordPress/plugin-check/pull/50)
