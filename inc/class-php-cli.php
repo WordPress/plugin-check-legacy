@@ -2,9 +2,9 @@
 namespace WordPressdotorg\Plugin_Check;
 
 /**
- * Class Class_PHP_CLI
+ * Class PHP_CLI
  *
- * @since   TBD
+ * @since   1.0.0
  *
  * @package WordPressdotorg\Plugin_Check
  */
