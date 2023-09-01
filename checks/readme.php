@@ -5,11 +5,13 @@ use WordPressdotorg\Plugin_Check\{Error, Guideline_Violation, Message, Notice, W
 class Readme extends Check_Base {
 	public function check_readmetxt_exists() {
 		if ( ! $this->readme ) {
-			return new Error(
-				'readme_missing',
-				'No readme.txt or readme.md was not found. readme.txt/readme.md is a required file.'
-			);
+			return;
 		}
+
+		return new Error(
+			'readme_missing',
+			__( 'No readme.txt or readme.md was not found. readme.txt/readme.md is a required file.', 'wporg-plugins' )
+		);
 	}
 
 	public function check_license_present() {
