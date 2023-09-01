@@ -4,7 +4,7 @@ use WordPressdotorg\Plugin_Check\{Error, Guideline_Violation, Message, Notice, W
 
 class Readme extends Check_Base {
 	public function check_readmetxt_exists() {
-		if ( ! $this->readme ) {
+		if ( $this->readme ) {
 			return;
 		}
 
