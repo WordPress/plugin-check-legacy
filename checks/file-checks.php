@@ -67,9 +67,8 @@ class File_Checks extends Check_Base {
 		} );
 
 		if ( $files ) {
-			$notice_or_error = ( ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || 'production' !== wp_get_environment_type() ) ? Notice::class : Error::class;
 
-			return new $notice_or_error(
+			return $this->throw_notice(
 				'application_detected',
 				sprintf(
 					__( 'Application files are not permitted. Found: %s', 'wporg-plugins' ),
@@ -78,6 +77,7 @@ class File_Checks extends Check_Base {
 					}, $files ) ) )
 				)
 			);
+
 		}
 	}
 
@@ -89,17 +89,17 @@ class File_Checks extends Check_Base {
 		} );
 
 		if ( $files ) {
-			$notice_or_error = ( ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || 'production' !== wp_get_environment_type() ) ? Notice::class : Error::class;
-
-			return new $notice_or_error(
+			
+			return $this->throw_notice(
 				'vcs_present',
 				sprintf(
-					'Version control checkouts should not be present. Found: %s',
+					__( 'Version control checkouts should not be present. Found: %s', 'wporg-plugins' ),
 					implode( ', ', array_unique( array_map( function( $file ) {
 						return '<code>' . esc_html( basename( dirname( $file ) ) ) . '</code>';
 					}, $files ) ) )
 				)
 			);
+
 		}
 	}
 
