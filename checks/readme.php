@@ -3,6 +3,24 @@ namespace WordPressdotorg\Plugin_Check\Checks;
 use WordPressdotorg\Plugin_Check\{Error, Guideline_Violation, Message, Notice, Warning};
 
 class Readme extends Check_Base {
+	/**
+	 * Checks for the presence of a readme.txt file and throw an error if it's missing.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return void|Error
+	 */
+	public function check_readme_exists() {
+		if ( $this->readme ) {
+			return;
+		}
+
+		return new Error(
+			'readme_missing',
+			__( 'No readme.txt or readme.md was not found. readme.txt/readme.md is a required file.', 'wporg-plugins' )
+		);
+	}
+
 	public function check_license_present() {
 		if ( $this->readme && empty( $this->readme->license ) ) {
 			return new Error(
