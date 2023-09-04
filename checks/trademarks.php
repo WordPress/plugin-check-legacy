@@ -229,8 +229,16 @@ class Trademarks extends Check_Base {
 		if ( empty( $input ) ) {
 			return null;
 		}
+		/**
+		 * Get the user email domain.
+		 * For plugins on WordPress.org, the WP_Post on the plugin directory will be passed.
+		 */
+		$user_email_domain = null;
+		if ( $this->post ) {
+			$user_email_domain = explode( '@', get_user_by( 'id', $this->post->post_author )->user_email, 2 );
+		}
 
-		$check = $this->has_trademarked_slug( $input );
+		$check = $this->has_trademarked_slug( $input, $user_email_domain );
 		if ( ! $check ) {
 			return null;
 		}
@@ -272,9 +280,12 @@ class Trademarks extends Check_Base {
 	 *
 	 * @since 1.0.0
 	 *
+	 * @param string $slug
+	 * @param ?string $email_domain_exceptions
+	 *
 	 * @return string|false The trademarked slug if found, false otherwise.
 	 */
-	protected function has_trademarked_slug( string $slug ) {
+	protected function has_trademarked_slug( string $slug, ?string $email_domain_exceptions = null ) {
 		// We work on slugs for this check.
 		$slug = sanitize_title_with_dashes( $slug );
 
@@ -307,6 +318,16 @@ class Trademarks extends Check_Base {
 				if ( 0 === stripos( $slug, $portmanteau ) ) {
 					$has_trademarked_slug = $portmanteau;
 					break;
+				}
+			}
+		}
+
+		if ( $email_domain_exceptions ) {
+			// If email domain is on our list of possible exceptions, we have an extra check.
+			if ( $has_trademarked_slug && array_key_exists( $email_domain_exceptions, self::TRADEMARK_EXCEPTIONS ) ) {
+				// If $has_trademarked_slug is in the array for that domain, they can use the term.
+				if ( in_array( $has_trademarked_slug, self::TRADEMARK_EXCEPTIONS[ $email_domain_exceptions ] ) ) {
+					$has_trademarked_slug = false;
 				}
 			}
 		}
