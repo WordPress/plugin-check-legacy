@@ -4,10 +4,21 @@ namespace WordPressdotorg\Plugin_Check\Checks;
 
 use WordPressdotorg\Plugin_Check\Guideline_Violation;
 
+/**
+ * Check for trademarks.
+ *
+ * @since 1.0.0
+ */
 class Trademarks extends Check_Base {
 
-	// Tradmarked terms that are commonly abused on WordPress.org.
-	const TRADEMARKED_SLUGS = array(
+	/**
+	 * Trademarked terms that are commonly abused on WordPress.org.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string[]
+	 */
+	const TRADEMARKED_SLUGS = [
 		'adobe-',
 		'adsense-',
 		'advanced-custom-fields-',
@@ -117,70 +128,117 @@ class Trademarks extends Check_Base {
 		'yoast',
 		'youtube-',
 		'you-tube-',
-	);
+	];
 
-	// Domains from which exceptions would be accepted.
-	const TRADEMARK_EXCEPTIONS = array(
-		'adobe.com'             => array( 'adobe' ),
-		'automattic.com'        => array( 'akismet', 'akismet-', 'jetpack', 'jetpack-', 'wordpress', 'wp-', 'woo', 'woo-', 'woocommerce', 'woocommerce-' ),
-		'facebook.com'          => array( 'facebook', 'instagram', 'oculus', 'whatsapp' ),
-		'support.microsoft.com' => array( 'bing-', 'microsoft-' ),
-		'trustpilot.com'        => array( 'trustpilot' ),
-		'microsoft.com'         => array( 'bing-', 'microsoft-' ),
-		'yandex-team.ru'        => array( 'yandex' ),
-		'yoast.com'             => array( 'yoast' ),
-		'opera.com'             => array( 'opera-' ),
-		'adobe.com'             => array( 'adobe-' ),
-	);
+	/**
+	 * Domains from which exceptions would be accepted.
+	 *
+	 * Currently, not in use since there is no way to check the domain of the plugin author
+	 * on a public plugin, only WP.org can do this check.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string[]
+	 */
+	const TRADEMARK_EXCEPTIONS = [
+		'adobe.com'             => [ 'adobe' ],
+		'automattic.com'        => [ 'akismet', 'akismet-', 'jetpack', 'jetpack-', 'wordpress', 'wp-', 'woo', 'woo-', 'woocommerce', 'woocommerce-' ],
+		'facebook.com'          => [ 'facebook', 'instagram', 'oculus', 'whatsapp' ],
+		'support.microsoft.com' => [ 'bing-', 'microsoft-' ],
+		'trustpilot.com'        => [ 'trustpilot' ],
+		'microsoft.com'         => [ 'bing-', 'microsoft-' ],
+		'yandex-team.ru'        => [ 'yandex' ],
+		'yoast.com'             => [ 'yoast' ],
+		'opera.com'             => [ 'opera-' ],
+		'adobe.com'             => [ 'adobe-' ],
+	];
 
-	// Trademarks that are allowed as 'for-whatever' ONLY.
-	const FOR_USE_EXCEPTIONS = array(
+	/**
+	 * Trademarks that are allowed as 'for-whatever' ONLY.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string[]
+	 */
+	const FOR_USE_EXCEPTIONS = [
 		'woocommerce',
-	);
+	];
 
-	// Commonly used 'combo' names (to prevent things like 'woopress').
-	const PORTMANTEAUS = array(
+	/**
+	 * Commonly used 'combo' names (to prevent things like 'woopress').
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string[]
+	 */
+	const PORTMANTEAUS = [
 		'woo',
-	);
+	];
 
-	public function check_readme() {
+	/**
+	 * Validate the plugin name on the readme against trademarks.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return Guideline_Violation|null
+	 */
+	public function check_readme(): ?Guideline_Violation {
 		$preamble = __( 'Error: The readme name includes a restricted term.', 'wporg-plugins' );
 
-		return $this->_trademark_check( $this->readme->name??false, $preamble );
+		return $this->verify_trademark( $this->readme->name ?? null, $preamble );
 	}
 
-	public function check_plugin_name() {
+	/**
+	 * Check the plugin name on the boostrap file against trademarks.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return Guideline_Violation|null
+	 */
+	public function check_plugin_name(): ?Guideline_Violation {
 		$preamble = __( 'Error: The plugin name includes a restricted term.', 'wporg-plugins' );
 
-		return $this->_trademark_check( $this->headers['Name']??false, $preamble );
+		return $this->verify_trademark( $this->headers['Name'] ?? null, $preamble );
 	}
 
-	public function check_plugin_slug() {
+	/**
+	 * Verify the plugin slug against trademarks.
+	 *
+	 * Note that this will not run if the plugin slug is not set, which will always
+	 * be the case if this is being run against a plugin that is not in the directory.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return Guideline_Violation|null
+	 */
+	public function check_plugin_slug(): ?Guideline_Violation {
 		$preamble = __( 'Error: The plugin slug includes a restricted term.', 'wporg-plugins' );
 
-		return $this->_trademark_check( $this->slug??false, $preamble );
+		return $this->verify_trademark( $this->slug ?? null, $preamble );
 	}
 
-	public function _trademark_check( $input, $preamble = '' ) {
+	/**
+	 * Determine if the plugin name or slug contains a trademarked term.
+	 *
+	 * @param string|null $input
+	 * @param string|null $preamble
+	 *
+	 * @return null|Guideline_Violation
+	 */
+	protected function verify_trademark( ?string $input, ?string $preamble = '' ) {
 		if ( empty( $input ) ) {
-			return;
+			return null;
 		}
 
-		/*
-		 * Get the user email domain.
-		 * For plugins on WordPress.org, the WP_Post on the plugin directory will be passed.
-		 */
-		$user_email_domain = false;
-		if ( $this->post ) {
-			$user_email_domain = explode( '@', get_user_by( 'id', $this->post->post_author )->user_email, 2 );
-		}
-
-		$check = $this->has_trademarked_slug( $input, $user_email_domain );
+		$check = $this->has_trademarked_slug( $input );
 		if ( ! $check ) {
-			return;
+			return null;
 		}
 
-		if ( $check === trim( $check, '-' ) && in_array( $check, self::FOR_USE_EXCEPTIONS ) ) {
+		if (
+			$check === trim( $check, '-' )
+			&& in_array( $check, self::FOR_USE_EXCEPTIONS )
+		) {
 			// Trademarks that do NOT end in "-", but are within the FOR_USE_EXCEPTIONS array can be used, but only if it ends with 'for x'
 			$message = sprintf(
 			/* translators: 1: plugin slug, 2: trademarked term */
@@ -212,9 +270,11 @@ class Trademarks extends Check_Base {
 	/**
 	 * Whether the uploaded plugin uses a trademark in the slug.
 	 *
+	 * @since 1.0.0
+	 *
 	 * @return string|false The trademarked slug if found, false otherwise.
 	 */
-	public function has_trademarked_slug( $slug, $email_domain_exceptions = '' ) {
+	protected function has_trademarked_slug( string $slug ) {
 		// We work on slugs for this check.
 		$slug = sanitize_title_with_dashes( $slug );
 
@@ -251,16 +311,6 @@ class Trademarks extends Check_Base {
 			}
 		}
 
-		if ( $email_domain_exceptions ) {
-			// If email domain is on our list of possible exceptions, we have an extra check.
-			if ( $has_trademarked_slug && array_key_exists( $email_domain_exceptions, self::TRADEMARK_EXCEPTIONS ) ) {
-				// If $has_trademarked_slug is in the array for that domain, they can use the term.
-				if ( in_array( $has_trademarked_slug, self::TRADEMARK_EXCEPTIONS[ $email_domain_exceptions ] ) ) {
-					$has_trademarked_slug = false;
-				}
-			}
-		}
-
 		return $has_trademarked_slug;
 	}
 
@@ -274,7 +324,7 @@ class Trademarks extends Check_Base {
 	 *
 	 * @return bool
 	 */
-	public function is_valid_for_use_exception( string $slug, string $trademark ): bool {
+	protected function is_valid_for_use_exception( string $slug, string $trademark ): bool {
 		if ( empty( $slug ) ) {
 			return false;
 		}
