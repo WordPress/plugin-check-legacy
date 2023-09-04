@@ -212,6 +212,15 @@ class Trademarks extends Check_Base {
 	 * @return Guideline_Violation|null
 	 */
 	public function check_plugin_slug(): ?Guideline_Violation {
+		// Do not check the slug for published/approved plugins.
+		// This check is only for new plugins and when being used in a local development environment.
+		if (
+			$this->post
+			&& ! in_array( $this->post->post_status, [ 'new', 'pending' ], true )
+		) {
+			return null;
+		}
+
 		$preamble = __( 'Error: The plugin slug includes a restricted term.', 'wporg-plugins' );
 
 		return $this->verify_trademark( $this->slug ?? null, $preamble );
