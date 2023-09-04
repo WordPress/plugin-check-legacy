@@ -1,5 +1,7 @@
 <?php
+
 namespace WordPressdotorg\Plugin_Check\Checks;
+
 use WordPressdotorg\Plugin_Check\Guideline_Violation;
 
 class Trademarks extends Check_Base {
@@ -144,19 +146,19 @@ class Trademarks extends Check_Base {
 	public function check_readme() {
 		$preamble = __( 'Error: The readme name includes a restricted term.', 'wporg-plugins' );
 
-		return $this->_trademark_check( $this->readme->name ?? false, $preamble );
+		return $this->_trademark_check( $this->readme->name??false, $preamble );
 	}
 
 	public function check_plugin_name() {
 		$preamble = __( 'Error: The plugin name includes a restricted term.', 'wporg-plugins' );
 
-		return $this->_trademark_check( $this->headers['Name'] ?? false, $preamble );
+		return $this->_trademark_check( $this->headers['Name']??false, $preamble );
 	}
 
 	public function check_plugin_slug() {
 		$preamble = __( 'Error: The plugin slug includes a restricted term.', 'wporg-plugins' );
 
-		return $this->_trademark_check( $this->slug ?? false, $preamble );
+		return $this->_trademark_check( $this->slug??false, $preamble );
 	}
 
 	public function _trademark_check( $input, $preamble = '' ) {
@@ -181,15 +183,15 @@ class Trademarks extends Check_Base {
 		if ( $check === trim( $check, '-' ) && in_array( $check, self::FOR_USE_EXCEPTIONS ) ) {
 			// Trademarks that do NOT end in "-", but are within the FOR_USE_EXCEPTIONS array can be used, but only if it ends with 'for x'
 			$message = sprintf(
-				/* translators: 1: plugin slug, 2: trademarked term */
+			/* translators: 1: plugin slug, 2: trademarked term */
 				__( 'Your chosen plugin name - %1$s - contains the restricted term "%2$s" which cannot be used within in your plugin name, unless your plugin name ends with "for %2$s". The term must still not appear anywhere else in your name.', 'wporg-plugins' ),
 				'<code>' . esc_html( $input ) . '</code>',
 				esc_html( trim( $check, '-' ) )
 			);
-		} elseif ( $check === trim( $check, '-' ) ) {
+		} else if ( $check === trim( $check, '-' ) ) {
 			// Trademarks that do NOT end in "-" indicate slug cannot contain term at all.
 			$message = sprintf(
-				/* translators: 1: plugin slug, 2: trademarked term */
+			/* translators: 1: plugin slug, 2: trademarked term */
 				__( 'Your chosen plugin name - %1$s - contains the restricted term "%2$s" which cannot be used at all in your plugin name.', 'wporg-plugins' ),
 				'<code>' . esc_html( $input ) . '</code>',
 				esc_html( trim( $check, '-' ) )
@@ -197,7 +199,7 @@ class Trademarks extends Check_Base {
 		} else {
 			// Trademarks ending in "-" indicate slug cannot BEGIN with that term.
 			$message = sprintf(
-				/* translators: 1: plugin slug, 2: trademarked term  */
+			/* translators: 1: plugin slug, 2: trademarked term  */
 				__( 'Your chosen plugin name - %1$s - contains the restricted term "%2$s" and cannot be used to begin your plugin name. We disallow the use of certain terms in ways that are abused, or potentially infringe on and/or are misleading with regards to trademarks. You may use the term "%2$s" elsewhere in your plugin name, such as "... for %2$s".', 'wporg-plugins' ),
 				'<code>' . esc_html( $input ) . '</code>',
 				esc_html( trim( $check, '-' ) )
@@ -219,13 +221,13 @@ class Trademarks extends Check_Base {
 		$has_trademarked_slug = false;
 
 		foreach ( self::TRADEMARKED_SLUGS as $trademark ) {
-			if ( '-' === $trademark[-1] ) {
+			if ( '-' === $trademark[ -1 ] ) {
 				// Trademarks ending in "-" indicate slug cannot begin with that term.
 				if ( 0 === strpos( $slug, $trademark ) ) {
 					$has_trademarked_slug = $trademark;
 					break;
 				}
-			} elseif ( false !== strpos( $slug, $trademark ) ) {
+			} else if ( false !== strpos( $slug, $trademark ) ) {
 				// Otherwise, the term cannot appear anywhere in slug.
 
 				// check for 'for-TRADEMARK' exceptions.
@@ -264,9 +266,24 @@ class Trademarks extends Check_Base {
 
 	/**
 	 * Validate whether the trademark is valid with a for-use exception.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $slug
+	 * @param string $trademark
+	 *
+	 * @return bool
 	 */
-	public function is_valid_for_use_exception( $slug, $trademark ) {
-		if ( ! $slug || ! $trademark || ! in_array( $trademark, self::FOR_USE_EXCEPTIONS ) ) {
+	public function is_valid_for_use_exception( string $slug, string $trademark ): bool {
+		if ( empty( $slug ) ) {
+			return false;
+		}
+
+		if ( ! $trademark ) {
+			return false;
+		}
+
+		if ( ! in_array( $trademark, self::FOR_USE_EXCEPTIONS ) ) {
 			return false;
 		}
 
