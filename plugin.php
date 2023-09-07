@@ -1,9 +1,10 @@
 <?php
 /**
  * Plugin Name: Plugin Check
- * Description: Runs checks against a plugin to verify if things are looking good.
- * Author: WordPress.org
- * Version: 1.0.0
+ * Plugin URI: https://github.com/WordPress/plugin-check/
+ * Description: Runs checks against a plugin to verify the latest WordPress standards and practices.
+ * Author: Plugin Review Team
+ * Version: 0.2.0
  * Text Domain: plugin-check
  * License: GPLv2
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -11,6 +12,7 @@
 
 namespace WordPressdotorg\Plugin_Check;
 use WordPressdotorg\Plugin_Directory\Readme\Parser as Readme_Parser;
+
 const PLUGIN_DIR = __DIR__;
 
 /**
@@ -20,7 +22,7 @@ const PLUGIN_DIR = __DIR__;
  *
  * @var string
  */
-const PLUGIN_CHECK_VERSION = '1.0.0';
+const PLUGIN_CHECK_VERSION = '0.2.0';
 
 include __DIR__ . '/export.php';
 include __DIR__ . '/message.php';
@@ -83,10 +85,7 @@ function run_all_checks( $args ) {
 
 	if ( ! $args['readme'] ) {
 		$readme_files = preg_grep( '!(^|/)readme.(txt|md)$!i', $top_level_files );
-		if ( ! class_exists( '\WordPressdotorg\Plugin_Directory\Readme\Parser' ) && file_exists( __DIR__ . '/readme-parser.php' ) ) {
-			require_once __DIR__ . '/readme-parser.php';
-		}
-		if ( $readme_files && class_exists( '\WordPressdotorg\Plugin_Directory\Readme\Parser' ) ) {
+		if ( $readme_files ) {
 			$args['readme'] = new Readme_Parser( array_shift( $readme_files ) );
 		}
 	}

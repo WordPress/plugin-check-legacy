@@ -7,7 +7,7 @@ class Code_Constants extends Check_Base {
 	/**
 	 * Checks if any PHP files contain the `ALLOW_UNFILTERED_UPLOADS` constant. Not permitted.
 	 *
-	 * @since 1.0.0
+	 * @since 0.2.0
 	 *
 	 * @return void|Error
 	 */
@@ -18,7 +18,7 @@ class Code_Constants extends Check_Base {
 
 		return new Error(
 			'allow_unfiltered_uploads_detected',
-			__( 'ALLOW_UNFILTERED_UPLOADS is not permitted.', 'wporg-plugins' )
+			__( 'ALLOW_UNFILTERED_UPLOADS is not permitted.', 'plugin-check' )
 		);
 	}
 

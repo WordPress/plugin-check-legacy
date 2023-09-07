@@ -38,7 +38,7 @@ class File_Checks extends Check_Base {
 	/**
 	 * Checks for a number of application files that are not permitted.
 	 *
-	 * @since 1.0.0
+	 * @since 0.2.0
 	 *
 	 * @return void|Error|Notice
 	 */
@@ -80,7 +80,7 @@ class File_Checks extends Check_Base {
 		return $this->throw_notice(
 			'application_detected',
 			sprintf(
-				__( 'Application files are not permitted. Found: %s', 'wporg-plugins' ),
+				__( 'Application files are not permitted. Found: %s', 'plugin-check' ),
 				implode( ', ', array_unique( array_map( function( $file ) {
 					return '<code>' . esc_html( $file ) . '</code>';
 				}, $files ) ) )
@@ -100,7 +100,7 @@ class File_Checks extends Check_Base {
 			return $this->throw_notice(
 				'vcs_present',
 				sprintf(
-					__( 'Version control checkouts should not be present. Found: %s', 'wporg-plugins' ),
+					__( 'Version control checkouts should not be present. Found: %s', 'plugin-check' ),
 					implode( ', ', array_unique( array_map( function( $file ) {
 						return '<code>' . esc_html( basename( dirname( $file ) ) ) . '</code>';
 					}, $files ) ) )
