@@ -40,6 +40,7 @@ class Sanitize extends Parser
 
 	public $noSanitizingNeeded = [
 		'intval',
+		'abs',
 		'absint',
 		'strpos',
 		'in_array',

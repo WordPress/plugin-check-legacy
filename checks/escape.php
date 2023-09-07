@@ -89,6 +89,10 @@ class Escape extends Parser {
 					$funccall->setAttribute( 'comments', null );
 					$this->process_echo_or_print_or_function( $funccall );
 				}
+				// _e is not escaping at all.
+				if ($this->hasFunctionName($funccall) && in_array($funccall->name->toString(), ['_e'])){
+					$this->saveLinesNodeDetailLog( $funccall, 'needs_escape' );
+				}
 			}
 		}
 	}
@@ -139,6 +143,18 @@ class Escape extends Parser {
 			case 'PhpParser\Node\Arg':
 				if(!empty($node->value)){
 					return $this->isThisValidForEscaping($node->value);
+				}
+				return true;
+				break;
+
+			case 'PhpParser\Node\Expr\BinaryOp\Concat':
+				$exprElements = $this->unfoldConcatExpr( $node ); //Array of all the elements that are contained in the echo.
+				if ( ! empty( $exprElements ) ) {
+					foreach ( $exprElements as $element ) {
+						if ( ! $this->isThisValidForEscaping( $element ) ) {
+							return false;
+						}
+					}
 				}
 				return true;
 				break;
