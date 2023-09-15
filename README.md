@@ -1,24 +1,13 @@
-Plugin Check
-===============
-* Contributors: 
-* Requires at least: 6.2
-* Tested up to: 6.3.1
-* License: GPLv2 or later
-* License URI: http://www.gnu.org/licenses/gpl-2.0.html
+# Plugin Check Plugin (PCP)
 
-Plugin Check is a tool for the WordPress.org plugins review team.
+Plugin Check is a tool from the WordPress.org plugin review team, it provides an initial check of whether your plugin meets our requirements for hosting.
 
-## Description ##
+## Important Note
 
-Plugin Check is a tool for the WordPress.org plugins review team.
-This is intended as a generic tool that is not at all intended on being complete.
+This repository is for the legacy version of the plugin, which is no longer maintained. The current version of the plugin is available at [10up/plugin-check](https://github.com/10up/plugin-check).
 
-Setup steps:
- - `npm install`
- - `npm run wp-env start`
- - `npm run setup:tools`
+Soon the code for this repository will be moved and archived and the 10up repository will be transferred to the WordPress organization and maintained here.
 
-Commands:
- - `npm run wp-env start`
- - `npm test`
+If you want to log an issue please use their repository and not this one, as this one will be archived soon.
 
+Head over to the WordPress.org plugin repository and [download the plugin](https://wordpress.org/plugins/plugin-check/), it should be used like any other WordPress plugin.
