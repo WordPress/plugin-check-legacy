@@ -10,4 +10,8 @@ Soon the code for this repository will be moved and archived and the 10up reposi
 
 If you want to log an issue please use their repository and not this one, as this one will be archived soon.
 
-Head over to the WordPress.org plugin repository and [download the plugin](https://wordpress.org/plugins/plugin-check/), it should be used like any other WordPress plugin.
+Soon you will be able to head over to the WordPress.org plugin repository and [download the plugin](https://wordpress.org/plugins/plugin-check/), it should be used like any other WordPress plugin.
+
+## Current Version: 
+
+* Pre Release: [0.2.0](https://github.com/10up/plugin-check/releases/tag/0.2.0) - [Download](https://github.com/10up/plugin-check/releases/download/0.2.0/plugin-check.zip)
