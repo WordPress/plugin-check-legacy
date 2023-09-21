@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report an Issue
+    url: https://github.com/10up/plugin-check/issues/new/choose
+    about: Please report any issues you encounter while using this plugin on the other repository. (This repository will be archived)
+
