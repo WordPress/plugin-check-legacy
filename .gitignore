@@ -1,5 +1,0 @@
-composer.lock
-package-lock.json
-vendor/
-node_modules/
-readme-parser.php
