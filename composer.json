@@ -18,6 +18,7 @@
 		"sirbrillig/phpcs-variable-analysis": "^2",
 		"wp-coding-standards/wpcs": "^2",
 		"phpcsstandards/phpcsutils": "^1.x-dev",
+		"nikic/php-parser": "^4.15",
 		"afragen/wordpress-plugin-readme-parser": "dev-master"
 	},
 	"require-dev": {
