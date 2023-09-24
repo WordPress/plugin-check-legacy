@@ -87,6 +87,33 @@ class Readme extends Check_Base {
 		}
 	}
 
+	public function check_tested_up_to() {
+		$request = wp_remote_get( 'https://api.wordpress.org/core/version-check/1.7/' );
+
+		if ( is_wp_error( $request ) ) {
+			return;
+		}
+
+		$api_response   = json_decode( wp_remote_retrieve_body( $request ), true );
+		$latest_release = $api_response['offers'][0]['version'];
+
+		if (
+			! empty( $this->readme->tested ) &&
+			! empty( $latest_release ) &&
+			! str_contains( $latest_release, $this->readme->tested )
+		) {
+			return new Warning(
+				'tested_mismatch',
+				sprintf(
+					/* translators: 1: readme.txt. 2: Tested up to version from readme.txt. 3: Latest release version of WordPress. */
+					__( 'The Tested up to value in your %1$s file does not match the latest version of WordPress. Found: %2$s. Expected: %3$s.', 'wporg-plugins' ),
+					'<code>readme.txt</code>',
+					sprintf( '<code>%s</code>', $this->readme->tested ),
+					sprintf( '<code>%s</code>', $latest_release )
+				)
+			);
+		}
+	}
 
 	public function check_stable_tag() {
 		if ( ! $this->readme ) {
